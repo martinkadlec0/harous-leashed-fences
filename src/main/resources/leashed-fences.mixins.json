@@ -1,0 +1,17 @@
+{
+	"required": true,
+	"package": "harou.example.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"BlockAttachedEntityMixin",
+		"LeashKnotEntityMixin",
+		"LeadItemMixin",
+		"ClientPlayerInteractionManagerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

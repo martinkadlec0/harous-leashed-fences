@@ -1,0 +1,39 @@
+{
+	"schemaVersion": 1,
+	"id": "leashed-fences",
+	"version": "${version}",
+	"name": "Leashed Fences",
+	"description": "Allows to leash two fences together!",
+	"authors": [
+		"BSHarou"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/leashed-fences",
+		"sources": "https://github.com/martinkadlec0/leashed-fences",
+		"issues": "https://github.com/martinkadlec0/leashed-fences/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/leashed-fences/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"harou.example.LeashedFencesMod"
+		],
+		"fabric-datagen": [
+			"harou.example.LeashedFencesModDataGenerator"
+		]
+	},
+	"mixins": [
+		"leashed-fences.mixins.json"
+	],
+	"accessWidener": "leashed-fences.accesswidener",
+	"depends": {
+		"fabricloader": ">=0.17.2",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

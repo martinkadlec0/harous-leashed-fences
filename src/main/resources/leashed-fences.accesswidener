@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+# Make getSavedEntityId overridable (remove final and make it accessible)
+extendable method net/minecraft/entity/Entity getSavedEntityId ()Ljava/lang/String;
+
