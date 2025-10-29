@@ -1,6 +1,8 @@
 package harou.example;
 
+import harou.example.network.KnotConnectionSyncS2CPacket;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,9 @@ public class LeashedFencesMod implements ModInitializer {
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
+
+		// Register custom packet for syncing knot connections
+		PayloadTypeRegistry.playS2C().register(KnotConnectionSyncS2CPacket.ID, KnotConnectionSyncS2CPacket.CODEC);
 
 		LOGGER.info("Leashed Fences mod initialized! Fences can now be leashed together!");
 	}

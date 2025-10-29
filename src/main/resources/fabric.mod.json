@@ -19,6 +19,9 @@
 		"main": [
 			"harou.example.LeashedFencesMod"
 		],
+		"client": [
+			"harou.example.LeashedFencesModClient"
+		],
 		"fabric-datagen": [
 			"harou.example.LeashedFencesModDataGenerator"
 		]

@@ -1,0 +1,50 @@
+- No lead item in hand
+    - No lead attached to player
+        - Fence has no knot
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+        - Fence has knot attached to mobs
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+            - Interact with knot: Player picks up all attached leads
+            - Modifier interact with knot: Nothing happens
+        - Fence has knot attached to another fence
+            - Not possible in Vanilla
+    - Player is already holding one or more leads
+        - Fence has no knot
+            - Interact with fence: All leads are tied to the fence, creating new knot
+            - Modifier interact with fence: All leads are tied to the fence, creating new knot
+        - Fence has knot attached to player
+            - Not possible in Vanilla
+        - Fence has knot attached to mobs
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot
+        - Fence has knot attached to another fence
+            - Not possible in Vanilla
+- Lead in main hand or off-hand
+    - No lead attached to player
+        - Fence has no knot
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+        - Fence has knot attached to mobs
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+            - Interact with knot: Player picks up all attached leads
+            - Modifier interact with knot: Nothing happens
+        - Fence has knot attached to another fence
+            - Not possible in Vanilla
+    - Player is already holding one or more leads
+        - Fence has no knot
+            - Interact with fence: All leads are tied to the fence, creating new knot
+            - Modifier interact with fence: All leads are tied to the fence, creating new knot
+        - Fence has knot attached to player
+            - Not possible in Vanilla
+        - Fence has knot attached to mobs
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot
+        - Fence has knot attached to another fence
+            - Not possible in Vanilla

@@ -1,0 +1,68 @@
+- No lead item in hand
+    - No lead attached to player
+        - Fence has no knot
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+        - Fence has knot attached to mobs
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+            - Interact with knot: Player picks up all leads attached to mobs
+            - Modifier interact with knot: Nothing happens
+        - Fence has knot attached to another fence
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+            - Interact with knot: Player picks up all leads attached to fences
+            - Modifier interact with knot: All connections to that knot are removed and the leads dropped on ground
+    - Player is already holding one or more leads
+        - Fence has no knot
+            - Interact with fence: All leads are tied to the fence, creating new knot
+            - Modifier interact with fence: All leads are tied to the fence, creating new knot
+        - Fence has knot attached to player
+            - Connection to player is removed, lead is dropped, everything else is ignored
+        - Fence has knot attached to mobs
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot
+        - Fence has knot attached to another fence
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot
+- Lead in main hand or off-hand
+    - No lead attached to player
+        - Fence has no knot
+            - Interact with fence: New knot is created and connected to player
+            - Modifier interact with fence: New knot is created and connected to player
+        - Fence has knot attached to mobs
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: Nothing happens
+            - Modifier interact with fence: Nothing happens
+            - Interact with knot: Player picks up all leads attached to mobs
+            - Modifier interact with knot: Nothing happens
+        - Fence has knot attached to another fence
+            - Interact with fence: New connection is created between the knot and player
+            - Modifier interact with fence: New connnection is created between the knot and player
+            - Interact with knot: New connnection is created between the knot and player
+            - Modifier interact with knot: New connnection is created between the knot and player
+    - Player is already holding one or more leads
+        - Fence has no knot
+            - Interact with fence: All leads are tied to the fence, creating new knot
+            - Modifier interact with fence: All leads are tied to the fence, creating new knot
+        - Fence has knot attached to player
+            - Connection to player is removed, lead is dropped, everything else is ignored
+        - Fence has knot attached to mobs
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot
+        - Fence has knot attached to another fence
+            - If this happens, any connections to other knots are ignored and left as they are
+            - Interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Interact with knot: All mobs player holds are moved to the existing knot
+            - Modifier interact with knot: All mobs player holds are moved to the existing knot

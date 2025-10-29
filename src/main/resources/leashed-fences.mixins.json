@@ -4,9 +4,14 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"BlockAttachedEntityMixin",
+		"EntityTrackerEntryMixin",
+		"FenceBlockMixin",
 		"LeashKnotEntityMixin",
-		"LeadItemMixin",
-		"ClientPlayerInteractionManagerMixin"
+		"LeadItemMixin"
+	],
+	"client": [
+		"ClientPlayerInteractionManagerMixin",
+		"EntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
