@@ -4,6 +4,8 @@ import harou.example.LeashedFencesMod;
 import harou.example.api.KnotConnectionAccess;
 import harou.example.network.KnotConnectionSyncS2CPacket;
 import harou.example.util.KnotConnectionManager;
+import harou.example.util.KnotInteractionHelper;
+import harou.example.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
 import net.minecraft.entity.Leashable;
@@ -40,11 +42,7 @@ public class FenceBlockMixin {
         LeashedFencesMod.LOGGER.info(">> Fence Block interaction");
         
         // Collect ALL entities held by player first
-        List<Leashable> heldByPlayer = Leashable.collectLeashablesHeldBy(player);
-        boolean playerHoldsMobs = heldByPlayer.stream()
-            .anyMatch(leashable -> !(leashable instanceof LeashKnotEntity));
-        boolean playerHoldsKnots = heldByPlayer.stream()
-            .anyMatch(leashable -> leashable instanceof LeashKnotEntity);
+        HeldEntities held = new HeldEntities(player);
         
         // Check if there's a knot at this position
         LeashKnotEntity knot = null;
@@ -60,7 +58,7 @@ public class FenceBlockMixin {
         if (knot == null) {
             // If player is holding knots, create the knot and handle custom connections below
             // (regardless of whether they have a lead item - lead consumption happens later)
-            if (playerHoldsKnots) {
+            if (held.hasKnots) {
                 // Create the knot - don't use vanilla attachHeldMobsToBlock as it won't find far-away held knots
                 knot = LeashKnotEntity.getOrCreate(world, pos);
                 LeashedFencesMod.LOGGER.info(">> Created new knot for custom connections");
@@ -76,14 +74,12 @@ public class FenceBlockMixin {
         // At this point, knot exists (either was already there or we just created it)
         
         // BUG FIX 1: Check if player is holding this knot - if so, detach it
-        for (Leashable held : heldByPlayer) {
-            if (held instanceof net.minecraft.entity.Entity heldEntity && heldEntity == knot) {
-                LeashedFencesMod.LOGGER.info(">> Player holding this knot, detaching");
-                ((Leashable)knot).detachLeash();
-                world.emitGameEvent(GameEvent.BLOCK_DETACH, pos, GameEvent.Emitter.of(player));
-                cir.setReturnValue(ActionResult.SUCCESS);
-                return;
-            }
+        if (KnotInteractionHelper.isHoldingEntity(held, knot)) {
+            LeashedFencesMod.LOGGER.info(">> Player holding this knot, detaching");
+            ((Leashable)knot).detachLeash();
+            world.emitGameEvent(GameEvent.BLOCK_DETACH, pos, GameEvent.Emitter.of(player));
+            cir.setReturnValue(ActionResult.SUCCESS);
+            return;
         }
         
         // Knot exists - check what's attached via VANILLA system (mobs, not custom fence connections)
@@ -101,16 +97,15 @@ public class FenceBlockMixin {
         }
         
         // Knot has only fence connections or no connections
-        // (heldByPlayer already collected above)
         
         // If player is holding mobs, attach them to the knot (vanilla behavior)
         // But DON'T return yet - we might also be holding knots!
-        if (playerHoldsMobs) {
+        if (held.hasMobs) {
             LeashedFencesMod.LOGGER.info(">> Player holding mobs, attaching to knot");
             LeadItem.attachHeldMobsToBlock(player, world, pos);
             
             // If ONLY holding mobs (no knots), we're done
-            if (!playerHoldsKnots) {
+            if (!held.hasKnots) {
                 cir.setReturnValue(ActionResult.SUCCESS);
                 return;
             }
@@ -118,66 +113,19 @@ public class FenceBlockMixin {
         }
         
         // If player is holding knots, ALWAYS create fence-to-fence connections (custom system)
-        // Check if player has lead item to consume
-        boolean hasLeadItem = player.getMainHandStack().getItem() instanceof LeadItem || 
-                             player.getOffHandStack().getItem() instanceof LeadItem;
-        if (playerHoldsKnots) {
-            LeashedFencesMod.LOGGER.info(">> Player holding knots, attempting to create custom connections");
-            boolean createdConnection = false;
-            boolean alreadyConnected = false;
-            
-            for (Leashable held : heldByPlayer) {
-                if (held instanceof LeashKnotEntity heldKnot && heldKnot != knot) {
-                    if (KnotConnectionManager.createConnection(heldKnot, knot)) {
-                        createdConnection = true;
-                        
-                        LeashedFencesMod.LOGGER.info(">> Created custom connection, transitioning from vanilla to custom system");
-                        
-                        // TRANSITION: Remove vanilla Leashable connection (without dropping lead - we're consuming it)
-                        held.detachLeashWithoutDrop();
-                        
-                        // Send network updates for custom connection
-                        KnotConnectionSyncS2CPacket.sendToTracking(heldKnot);
-                        KnotConnectionSyncS2CPacket.sendToTracking(knot);
-                        
-                        // Consume lead IF player has one - try main hand first, then offhand
-                        if (hasLeadItem && !player.getAbilities().creativeMode) {
-                            if (player.getMainHandStack().getItem() instanceof LeadItem) {
-                                player.getMainHandStack().decrement(1);
-                            } else if (player.getOffHandStack().getItem() instanceof LeadItem) {
-                                player.getOffHandStack().decrement(1);
-                            }
-                        }
-                    } else {
-                        // Connection already exists - drop the held knot
-                        alreadyConnected = true;
-                        LeashedFencesMod.LOGGER.info(">> Connection already exists, dropping held knot");
-                        held.detachLeash(); // Drop the lead this time
-                    }
-                }
-            }
-            
-            if (createdConnection) {
-                // Custom connection created - it's now permanent, player is no longer holding anything
-                LeashedFencesMod.LOGGER.info(">> Custom connection created, solidified (player not holding target)");
-                
-                knot.onPlace();
-                world.emitGameEvent(GameEvent.BLOCK_ATTACH, pos, GameEvent.Emitter.of(player));
-                cir.setReturnValue(ActionResult.SUCCESS);
-                return;
-            } else if (alreadyConnected) {
-                // Already connected - just drop and exit
-                LeashedFencesMod.LOGGER.info(">> Already connected, action complete");
+        if (held.hasKnots) {
+            boolean wasCreated = KnotInteractionHelper.createCustomConnections(held, knot, player, 
+                                                                                KnotInteractionHelper.hasLeadItem(player));
+            if (wasCreated) {
                 cir.setReturnValue(ActionResult.SUCCESS);
                 return;
             }
         }
         
         // Player has lead and is not holding anything - check if clicking on fence with custom connections
-        boolean hasLead = player.getMainHandStack().getItem() instanceof LeadItem ||
-                         player.getOffHandStack().getItem() instanceof LeadItem;
+        boolean hasLead = KnotInteractionHelper.hasLeadItem(player);
         
-        if (hasLead && heldByPlayer.isEmpty() && knot instanceof KnotConnectionAccess access) {
+        if (hasLead && held.isEmpty() && knot instanceof KnotConnectionAccess access) {
             KnotConnectionManager manager = access.leashedFences$getConnectionManager();
             List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(world, knot);
             
