@@ -53,6 +53,13 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     public void onCustomTick() {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         
+        // Handle vanilla leash distance checking (when this knot is being held by a player)
+        // BlockAttachedEntity.tick() doesn't call super.tick(), so Entity.tick()'s leash logic never runs
+        // We must manually call Leashable.tickLeash() here
+        if (self.getEntityWorld() instanceof ServerWorld serverWorld && this.isLeashed()) {
+            Leashable.tickLeash(serverWorld, (LeashKnotEntity & Leashable) (Object) self);
+        }
+        
         // Show which system(s) are active for this knot (debug display)
         boolean heldByPlayer = leashData != null && leashData.leashHolder != null;
         List<Leashable> vanillaHolding = Leashable.collectLeashablesHeldBy(self);
