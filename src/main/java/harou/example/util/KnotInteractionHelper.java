@@ -1,6 +1,5 @@
 package harou.example.util;
 
-import harou.example.LeashedFencesMod;
 import harou.example.api.KnotConnectionAccess;
 import harou.example.network.KnotConnectionSyncS2CPacket;
 import net.minecraft.entity.Entity;
@@ -122,8 +121,6 @@ public class KnotInteractionHelper {
                 if (KnotConnectionManager.createConnection(heldKnot, targetKnot)) {
                     createdConnection = true;
                     
-                    LeashedFencesMod.LOGGER.info(">> Created custom connection, transitioning from vanilla to custom system");
-                    
                     // TRANSITION: Remove vanilla Leashable connection (without dropping lead - we're consuming it)
                     heldLeashable.detachLeashWithoutDrop();
                     
@@ -138,7 +135,6 @@ public class KnotInteractionHelper {
                 } else {
                     // Connection already exists - drop the held knot
                     alreadyConnected = true;
-                    LeashedFencesMod.LOGGER.info(">> Connection already exists, dropping held knot");
                     heldLeashable.detachLeash(); // Drop the lead this time
                 }
             }
@@ -175,7 +171,6 @@ public class KnotInteractionHelper {
      */
     public static void removeKnotIfEmpty(LeashKnotEntity knot) {
         if (shouldRemoveKnot(knot)) {
-            LeashedFencesMod.LOGGER.info(">> Knot has no connections left, discarding");
             knot.discard();
         }
     }
@@ -192,8 +187,6 @@ public class KnotInteractionHelper {
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
         List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
         int connectionCount = connectedKnots.size();
-        
-        LeashedFencesMod.LOGGER.info(">> Discarding {} custom fence connections", connectionCount);
         
         for (LeashKnotEntity connectedKnot : connectedKnots) {
             // Remove custom connection
@@ -233,8 +226,6 @@ public class KnotInteractionHelper {
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
         List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
         int connectionCount = connectedKnots.size();
-        
-        LeashedFencesMod.LOGGER.info(">> Picking up {} custom fence connections, transitioning to vanilla", connectionCount);
         
         for (LeashKnotEntity connectedKnot : connectedKnots) {
             // TRANSITION: Remove custom connection

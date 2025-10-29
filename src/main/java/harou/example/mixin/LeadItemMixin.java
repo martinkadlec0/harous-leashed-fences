@@ -1,6 +1,5 @@
 package harou.example.mixin;
 
-import harou.example.LeashedFencesMod;
 import harou.example.util.KnotInteractionHelper;
 import harou.example.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
@@ -47,8 +46,6 @@ public class LeadItemMixin {
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
-
-        LeashedFencesMod.LOGGER.info(">> Lead Item used on fence block");
         
         // Collect ALL entities held by player (not just near this fence!)
         HeldEntities held = new HeldEntities(player);
@@ -79,7 +76,6 @@ public class LeadItemMixin {
         
         // Spec line 55-56: If knot exists and is attached to player, detach it and drop lead
         if (existingKnot != null && KnotInteractionHelper.isHoldingEntity(held, existingKnot)) {
-            LeashedFencesMod.LOGGER.info(">> Knot attached to player, detaching and dropping lead");
             ((Leashable)existingKnot).detachLeash();
             world.emitGameEvent(GameEvent.BLOCK_DETACH, pos, GameEvent.Emitter.of(player));
             cir.setReturnValue(ActionResult.SUCCESS);
@@ -107,7 +103,6 @@ public class LeadItemMixin {
                 knot.onPlace();
                 world.emitGameEvent(GameEvent.BLOCK_ATTACH, pos, GameEvent.Emitter.of(player));
                 cir.setReturnValue(ActionResult.SUCCESS);
-                LeashedFencesMod.LOGGER.info(">> Lead + no held entities: created player-to-knot connection (lead item interaction)");
             }
         }
     }

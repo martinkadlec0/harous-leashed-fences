@@ -1,6 +1,5 @@
 package harou.example.util;
 
-import harou.example.LeashedFencesMod;
 import harou.example.network.KnotConnectionSyncS2CPacket;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -168,7 +167,6 @@ public class KnotConnectionManager {
                     boolean hasCustomConnections = getManager(knot).hasConnections();
                     
                     if (!hasVanillaConnections && !isBeingLeashed && !hasCustomConnections) {
-                        LeashedFencesMod.LOGGER.info(">> Connected knot {} has no more connections, removing it", knot.getUuid());
                         // Send update to clients before discarding
                         KnotConnectionSyncS2CPacket.sendToTracking(knot);
                         knot.discard();

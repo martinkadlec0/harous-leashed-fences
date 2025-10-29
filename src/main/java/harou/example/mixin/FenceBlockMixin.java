@@ -1,6 +1,5 @@
 package harou.example.mixin;
 
-import harou.example.LeashedFencesMod;
 import harou.example.api.KnotConnectionAccess;
 import harou.example.network.KnotConnectionSyncS2CPacket;
 import harou.example.util.KnotConnectionManager;
@@ -39,8 +38,6 @@ public class FenceBlockMixin {
             return;
         }
         
-        LeashedFencesMod.LOGGER.info(">> Fence Block interaction");
-        
         // Collect ALL entities held by player first
         HeldEntities held = new HeldEntities(player);
         
@@ -61,7 +58,6 @@ public class FenceBlockMixin {
             if (held.hasKnots) {
                 // Create the knot - don't use vanilla attachHeldMobsToBlock as it won't find far-away held knots
                 knot = LeashKnotEntity.getOrCreate(world, pos);
-                LeashedFencesMod.LOGGER.info(">> Created new knot for custom connections");
                 // Continue to custom connection logic below
             } else {
                 // Player holding mobs or nothing, use vanilla behavior
@@ -75,7 +71,6 @@ public class FenceBlockMixin {
         
         // BUG FIX 1: Check if player is holding this knot - if so, detach it
         if (KnotInteractionHelper.isHoldingEntity(held, knot)) {
-            LeashedFencesMod.LOGGER.info(">> Player holding this knot, detaching");
             ((Leashable)knot).detachLeash();
             world.emitGameEvent(GameEvent.BLOCK_DETACH, pos, GameEvent.Emitter.of(player));
             cir.setReturnValue(ActionResult.SUCCESS);
@@ -90,7 +85,6 @@ public class FenceBlockMixin {
         
         // If knot has mob connections, ignore custom fence connections and use vanilla behavior
         if (hasMobs) {
-            LeashedFencesMod.LOGGER.info(">> Knot has mob connections, using vanilla behavior");
             ActionResult result = LeadItem.attachHeldMobsToBlock(player, world, pos);
             cir.setReturnValue(result);
             return;
@@ -101,7 +95,6 @@ public class FenceBlockMixin {
         // If player is holding mobs, attach them to the knot (vanilla behavior)
         // But DON'T return yet - we might also be holding knots!
         if (held.hasMobs) {
-            LeashedFencesMod.LOGGER.info(">> Player holding mobs, attaching to knot");
             LeadItem.attachHeldMobsToBlock(player, world, pos);
             
             // If ONLY holding mobs (no knots), we're done
@@ -131,7 +124,6 @@ public class FenceBlockMixin {
             
             if (!connectedKnots.isEmpty()) {
                 // Has custom fence connections - create player-to-knot connection
-                LeashedFencesMod.LOGGER.info(">> Lead + no held entities: creating player-to-knot connection");
                 double distance = player.squaredDistanceTo(knot);
                 if (distance <= 100.0) { // 10 blocks squared (same as vanilla)
                     ((Leashable)knot).attachLeash(player, true);
@@ -161,13 +153,10 @@ public class FenceBlockMixin {
         );
         
         for (LeashKnotEntity knot : knots) {
-            LeashedFencesMod.LOGGER.info(">> Fence at {} removed, immediately removing knot", pos);
-            
             // Clean up custom connections
             if (knot instanceof KnotConnectionAccess access) {
                 KnotConnectionManager manager = access.leashedFences$getConnectionManager();
                 if (manager.hasConnections()) {
-                    LeashedFencesMod.LOGGER.info(">> Cleaning up {} custom connections", manager.getConnectionCount());
                     manager.clearAllConnections(world, knot);
                     KnotConnectionSyncS2CPacket.sendToTracking(knot);
                 }

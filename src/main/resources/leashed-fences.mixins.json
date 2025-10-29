@@ -10,7 +10,6 @@
 		"LeadItemMixin"
 	],
 	"client": [
-		"ClientPlayerInteractionManagerMixin",
 		"EntityRendererMixin"
 	],
 	"injectors": {

@@ -21,7 +21,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import harou.example.LeashedFencesMod;
 import harou.example.api.CustomTickHandler;
 import harou.example.api.KnotConnectionAccess;
 import harou.example.network.KnotConnectionSyncS2CPacket;
@@ -191,7 +190,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         
         // If fence doesn't exist, clean up custom connections before removal
         if (!fenceExists && connectionManager.hasConnections()) {
-            LeashedFencesMod.LOGGER.info(">> Fence broken, cleaning up custom connections before knot removal");
             connectionManager.clearAllConnections(self.getEntityWorld(), self);
             
             // Send update to clients
@@ -209,9 +207,8 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     @Inject(method = "onBreak", at = @At("HEAD"))
     private void onBreakHead(ServerWorld world, Entity breaker, CallbackInfo ci) {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-
+        
         if (connectionManager.hasConnections()) {
-            LeashedFencesMod.LOGGER.info(">> Knot breaking, cleaning up {} custom connections", connectionManager.getConnectionCount());
             connectionManager.clearAllConnections(world, self);
             
             // Send update to clients
@@ -267,7 +264,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         // Only discard if the knot is completely unused (not holding anything, not being held, and no custom connections)
         if (!hasHeldEntities && !isBeingLeashed && !hasCustomConnections) {
             // Clean up all custom connections before discarding
-            LeashedFencesMod.LOGGER.info(">> Knot being removed via onHeldLeashUpdate, cleaning up connections");
             connectionManager.clearAllConnections(self.getEntityWorld(), self);
             
             // Send update to clients
@@ -293,8 +289,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
             return;
         }
         
-        LeashedFencesMod.LOGGER.info(">> Leash Knot Entity interaction");
-        
         // Check what's attached to this knot via VANILLA system (mobs only, not custom fence connections)
         // Custom fence connections are in KnotConnectionManager, not vanilla LeashData!
         List<Leashable> vanillaAttachedEntities = Leashable.collectLeashablesHeldBy(self);
@@ -303,7 +297,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         
         // If knot has mobs via vanilla system, ignore custom fence connections and use vanilla behavior
         if (knotHasMobs) {
-            LeashedFencesMod.LOGGER.info(">> Knot has mob connections, using vanilla behavior");
             return; // Let vanilla handle mob interactions
         }
         
@@ -317,7 +310,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         // === CASE 1: Player is holding this knot (connected to player) ===
         if (KnotInteractionHelper.isHoldingEntity(held, self)) {
             // Clicking on knot that's connected to player - remove connection and drop lead
-            LeashedFencesMod.LOGGER.info(">> Removing player-to-knot connection");
             ((Leashable)self).detachLeash();
             self.emitGameEvent(GameEvent.BLOCK_DETACH, player);
             self.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
@@ -327,7 +319,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         
         // === CASE 2: Player holding mobs - attach them to this knot ===
         if (held.hasMobs) {
-            LeashedFencesMod.LOGGER.info(">> Player holding mobs, letting vanilla handle it");
             return; // Let vanilla handle attaching mobs to knot
         }
         
@@ -338,7 +329,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         if (hasLead && held.isEmpty() && hasCustomFenceConnections) {
             double distance = player.squaredDistanceTo(self);
             if (distance <= 100.0) { // 10 blocks squared
-                LeashedFencesMod.LOGGER.info(">> Lead + no held entities: creating player-to-knot connection");
                 ((Leashable)self).attachLeash(player, true);
                 self.onPlace();
                 self.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
