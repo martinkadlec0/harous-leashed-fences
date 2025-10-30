@@ -117,41 +117,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     }
 
     @Override
-    public boolean canBeLeashed() {
-        // LeashKnotEntity can be leashed
-        return true;
-    }
-
-    @Override
-    public double getLeashSnappingDistance() {
-        // Allow longer distance for fence-to-fence connections
-        return 10.0;
-    }
-
-    @Override
-    public double getElasticLeashDistance() {
-        // No elasticity needed for fence-to-fence (they don't move)
-        return 10.0;
-    }
-
-    @Override
-    public void snapLongLeash() {
-        // When the leash is too long (e.g., block was removed), detach
-        this.detachLeash();
-    }
-
-    @Override
-    public void onShortLeashTick(Entity entity) {
-        // No behavior needed - knots don't move
-    }
-
-    @Override
-    public boolean applyElasticity(Entity leashHolder, Leashable.LeashData leashData) {
-        // No elasticity for stationary knots
-        return false;
-    }
-
-    @Override
     public Vec3d getLeashOffset(float tickProgress) {
         // When this knot is being leashed, attach the lead to the center of the knot
         // This matches the position used by getLeashPos() for consistency

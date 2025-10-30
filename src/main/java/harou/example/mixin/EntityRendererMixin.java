@@ -2,11 +2,13 @@ package harou.example.mixin;
 
 import harou.example.api.KnotConnectionAccess;
 import harou.example.util.KnotConnectionManager;
+import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
@@ -15,6 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,51 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     
     @Shadow
     protected abstract int getBlockLight(T entity, BlockPos pos);
+    
+    @Shadow
+    protected abstract Box getBoundingBox(T entity);
+    
+    /**
+     * Prevent culling of knots that have custom connections to visible knots.
+     * This mimics vanilla's behavior for Leashable entities (lines 87-93 in EntityRenderer).
+     */
+    @Inject(method = "shouldRender(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/render/Frustum;DDD)Z",
+            at = @At("RETURN"), cancellable = true)
+    private void preventCustomConnectionCulling(T entity, Frustum frustum, 
+            double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
+        // If already being rendered, don't need to check
+        if (cir.getReturnValue()) {
+            return;
+        }
+        
+        // Only handle LeashKnotEntities with custom connections
+        if (!(entity instanceof LeashKnotEntity knot)) {
+            return;
+        }
+        
+        if (!(knot instanceof KnotConnectionAccess access)) {
+            return;
+        }
+        
+        // Check if any custom connected knots are visible
+        KnotConnectionManager manager = access.leashedFences$getConnectionManager();
+        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
+        
+        if (!connectedKnots.isEmpty()) {
+            Box thisBox = this.getBoundingBox(entity);
+            
+            // Check if any connected knot is visible (similar to vanilla Leashable check)
+            for (LeashKnotEntity connectedKnot : connectedKnots) {
+                Box connectedBox = connectedKnot.getBoundingBox();
+                
+                // If the connected knot or the union of boxes is visible, render this knot
+                if (frustum.isVisible(connectedBox) || frustum.isVisible(thisBox.union(connectedBox))) {
+                    cir.setReturnValue(true);
+                    return;
+                }
+            }
+        }
+    }
     
     /**
      * After vanilla leash rendering is set up, add custom knot-to-knot connections.
@@ -75,8 +123,17 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
             newLeashDatas.addAll(state.leashDatas);
         }
         
+        
+        var knotUuid = knot.getUuid();
+        
         // Add custom connections
         for (LeashKnotEntity connectedKnot : connectedKnots) {
+            // Skip if this knot's UUID is greater than the connected knot's UUID
+            // This ensures we only render the connection once (from the knot with smaller UUID)
+            if (knotUuid.compareTo(connectedKnot.getUuid()) > 0) {
+                continue;
+            }
+            
             // Calculate connected knot position and lighting
             Vec3d connectedKnotPos = connectedKnot.getLerpedPos(tickProgress);
             Vec3d connectedKnotOffset = new Vec3d(0.0, 0.2, 0.0);
