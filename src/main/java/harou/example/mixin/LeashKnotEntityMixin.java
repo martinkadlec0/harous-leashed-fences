@@ -4,6 +4,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
@@ -14,7 +15,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -180,13 +180,12 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     }
 
     /**
-     * @author Leashed Fences Mod
-     * @reason Allow knot removal when fence is broken, clean up connections before removal.
+     * Inject into canStayAttached to clean up custom connections before the knot is removed.
      */
-    @Overwrite
-    public boolean canStayAttached() {
+    @Inject(method = "canStayAttached", at = @At("HEAD"), cancellable = true)
+    private void onCanStayAttached(CallbackInfoReturnable<Boolean> cir) {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-        boolean fenceExists = self.getEntityWorld().getBlockState(self.getAttachedBlockPos()).isIn(net.minecraft.registry.tag.BlockTags.FENCES);
+        boolean fenceExists = self.getEntityWorld().getBlockState(self.getAttachedBlockPos()).isIn(BlockTags.FENCES);
         
         // If fence doesn't exist, clean up custom connections before removal
         if (!fenceExists && connectionManager.hasConnections()) {
@@ -198,7 +197,8 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
             }
         }
         
-        return fenceExists;
+        // Set the return value and cancel to prevent the original method from running
+        cir.setReturnValue(fenceExists);
     }
 
     /**
@@ -248,12 +248,11 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
 
 
     /**
-     * @author Leashed Fences Mod
-     * @reason Prevent knot removal when it's part of fence-to-fence connections.
+     * Inject into onHeldLeashUpdate to prevent knot removal when it's part of fence-to-fence connections.
      * This is called when an entity that this knot is holding gets unleashed.
      */
-    @Overwrite
-    public void onHeldLeashUpdate(Leashable heldLeashable) {
+    @Inject(method = "onHeldLeashUpdate", at = @At("HEAD"), cancellable = true)
+    private void onOnHeldLeashUpdate(Leashable heldLeashable, CallbackInfo ci) {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         
         // Check if this knot still has entities held by it OR is being leashed to something OR has custom connections
@@ -274,6 +273,9 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
             // Now discard the knot
             self.discard();
         }
+        
+        // Cancel vanilla behavior - we've handled it ourselves
+        ci.cancel();
     }
 
     /**
