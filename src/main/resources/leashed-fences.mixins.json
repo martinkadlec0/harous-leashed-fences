@@ -10,12 +10,14 @@
 		"LeadItemMixin"
 	],
 	"client": [
-		"EntityRendererMixin"
+		"EntityRendererMixin",
+		"LeashCommandRendererMixin",
+		"LeashDataMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
 	},
 	"overwrites": {
-		"requireAnnotations": true
+		"conformVisibility": true
 	}
 }
