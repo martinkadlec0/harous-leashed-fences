@@ -25,13 +25,19 @@ public class KnotInteractionHelper {
      */
     public static class HeldEntities {
         public final List<Leashable> all;
+        public final List<Leashable> mobs;
+        public final List<LeashKnotEntity> knots;
         public final boolean hasMobs;
         public final boolean hasKnots;
         
-        public HeldEntities(PlayerEntity player) {
-            this.all = Leashable.collectLeashablesHeldBy(player);
-            this.hasMobs = all.stream().anyMatch(l -> !(l instanceof LeashKnotEntity));
-            this.hasKnots = all.stream().anyMatch(l -> l instanceof LeashKnotEntity);
+        public HeldEntities(Entity entity) {
+            this.all = Leashable.collectLeashablesHeldBy(entity);
+            this.mobs = all.stream()
+                .filter(l -> !(l instanceof LeashKnotEntity)).toList();
+            this.knots = all.stream()
+                .filter(l -> l instanceof LeashKnotEntity).map(l -> (LeashKnotEntity) l).toList();
+            this.hasMobs = !mobs.isEmpty();
+            this.hasKnots = !knots.isEmpty();
         }
         
         public boolean isEmpty() {
@@ -108,50 +114,59 @@ public class KnotInteractionHelper {
      * Returns true if at least one connection was created.
      */
     public static boolean createCustomConnections(
-            HeldEntities held, 
-            LeashKnotEntity targetKnot, 
-            PlayerEntity player,
-            boolean consumeLead) {
-        
+        HeldEntities held, 
+        LeashKnotEntity targetKnot, 
+        PlayerEntity player
+    ) {
         boolean createdConnection = false;
-        boolean alreadyConnected = false;
         
-        for (Leashable heldLeashable : held.all) {
-            if (heldLeashable instanceof LeashKnotEntity heldKnot && heldKnot != targetKnot) {
-                if (KnotConnectionManager.createConnection(heldKnot, targetKnot)) {
-                    createdConnection = true;
-                    
-                    // TRANSITION: Remove vanilla Leashable connection (without dropping lead - we're consuming it)
-                    heldLeashable.detachLeashWithoutDrop();
-                    
-                    // Send network updates for custom connection
-                    KnotConnectionSyncS2CPacket.sendToTracking(heldKnot);
-                    KnotConnectionSyncS2CPacket.sendToTracking(targetKnot);
-                    
-                    // Consume lead if requested
-                    if (consumeLead && hasLeadItem(player)) {
-                        consumeLead(player);
-                    }
-                } else {
-                    // Connection already exists - drop the held knot
-                    alreadyConnected = true;
-                    heldLeashable.detachLeash(); // Drop the lead this time
-                }
+        for (LeashKnotEntity heldKnot : held.knots) {
+            if (KnotConnectionManager.createConnection(heldKnot, targetKnot)) {
+                createdConnection = true;
+                
+                // TRANSITION: Remove vanilla Leashable connection (without dropping lead - we're consuming it)
+                ((Leashable) heldKnot).detachLeashWithoutDrop();
+                
+                // Send network updates for custom connection
+                KnotConnectionSyncS2CPacket.sendToTracking(heldKnot);
+            } else {
+                // Connection already exists - drop the held knot
+                ((Leashable) heldKnot).detachLeash(); // Drop the lead this time
             }
         }
         
         if (createdConnection) {
             // Play sounds and emit events
-            targetKnot.onPlace();
-            targetKnot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
-            targetKnot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
+            KnotConnectionSyncS2CPacket.sendToTracking(targetKnot);
+            // targetKnot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
+            // targetKnot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
             return true;
-        } else if (alreadyConnected) {
-            // Already connected - sound already played by detachLeash
-            return false;
-        }
+        } 
         
         return false;
+    }
+
+    /**
+     * Create vanilla connections between held mobs and target knot.
+     * Returns true if at least one connection was created.
+     * This is a ~replacment for LeadItem.attachHeldMobsToBlock
+     */
+    public static boolean createVanillaConnections(
+        HeldEntities held, 
+        LeashKnotEntity targetKnot, 
+        PlayerEntity player
+    ) {
+        boolean createdConnection = false;
+        
+        for (Leashable heldLeashable : held.mobs) {
+            if (heldLeashable.canBeLeashedTo(targetKnot)) {
+                // No need to detach from player as there can be only one holder
+				heldLeashable.attachLeash(targetKnot, true);
+				createdConnection = true;
+			}
+        }
+        
+        return createdConnection;
     }
     
     /**
@@ -185,7 +200,7 @@ public class KnotInteractionHelper {
         }
         
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
+        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
         int connectionCount = connectedKnots.size();
         
         for (LeashKnotEntity connectedKnot : connectedKnots) {
@@ -224,9 +239,8 @@ public class KnotInteractionHelper {
         }
         
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
-        int connectionCount = connectedKnots.size();
-        
+        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
+
         for (LeashKnotEntity connectedKnot : connectedKnots) {
             // TRANSITION: Remove custom connection
             KnotConnectionManager.removeConnection(knot, connectedKnot);
@@ -244,11 +258,6 @@ public class KnotInteractionHelper {
         removeKnotIfEmpty(knot);
         if (!knot.isRemoved()) {
             KnotConnectionSyncS2CPacket.sendToTracking(knot);
-        }
-        
-        // Give leads back
-        if (!player.getAbilities().creativeMode) {
-            player.giveItemStack(new ItemStack(Items.LEAD, connectionCount));
         }
         
         knot.emitGameEvent(GameEvent.BLOCK_DETACH, player);

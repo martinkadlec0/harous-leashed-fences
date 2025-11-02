@@ -1,5 +1,7 @@
 package harou.example.mixin;
 
+import harou.example.LeashedFencesMod;
+import harou.example.util.KnotInteractionActions;
 import harou.example.util.KnotInteractionHelper;
 import harou.example.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
@@ -13,6 +15,9 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
+
+import java.util.List;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -46,63 +51,51 @@ public class LeadItemMixin {
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
+
+        LeashedFencesMod.LOGGER.info(">>> LeadItemMixin");
         
-        // Collect ALL entities held by player (not just near this fence!)
+        // Collect ALL entities held by player
         HeldEntities held = new HeldEntities(player);
-        
-        // First, handle vanilla behavior - attach any held mobs to the fence
-        // But DON'T return yet - we might also be holding knots!
-        if (held.hasMobs) {
-            // Let vanilla handle attaching mobs
-            LeadItem.attachHeldMobsToBlock(player, world, pos);
-            
-            // If ONLY holding mobs (no knots), we're done
-            if (!held.hasKnots) {
-                cir.setReturnValue(ActionResult.SUCCESS);
-                return;
-            }
-            // Otherwise, continue to handle knots below
-        }
-        
-        // Check if there's an existing knot at this position
-        LeashKnotEntity existingKnot = null;
-        for (LeashKnotEntity entity : world.getEntitiesByClass(
-                LeashKnotEntity.class,
-                new net.minecraft.util.math.Box(pos),
-                e -> e.getAttachedBlockPos().equals(pos))) {
-            existingKnot = entity;
-            break;
-        }
-        
-        // Spec line 55-56: If knot exists and is attached to player, detach it and drop lead
-        if (existingKnot != null && KnotInteractionHelper.isHoldingEntity(held, existingKnot)) {
-            ((Leashable)existingKnot).detachLeash();
-            world.emitGameEvent(GameEvent.BLOCK_DETACH, pos, GameEvent.Emitter.of(player));
-            cir.setReturnValue(ActionResult.SUCCESS);
-            return;
-        }
-        
-        // Get or create the knot at this position (use existing if found, create new if not)
-        LeashKnotEntity knot = existingKnot != null ? existingKnot : LeashKnotEntity.getOrCreate(world, pos);
-        
-        // If player is holding knots and clicking on this fence, create custom connections
-        if (held.hasKnots) {
-            boolean wasCreated = KnotInteractionHelper.createCustomConnections(held, knot, player, true);
-            if (wasCreated) {
-                cir.setReturnValue(ActionResult.SUCCESS);
-                return;
-            }
-        }
-        
-        // Player has lead but isn't holding anything - create player-to-knot connection
-        // Modified behavior: Always create player-to-knot connection when player has lead and no held entities
-        if (!held.hasKnots) {
-            double distance = player.squaredDistanceTo(knot);
-            if (distance <= 100.0) { // 10 blocks squared (same as vanilla)
-                ((Leashable)knot).attachLeash(player, true);
+
+        // Check if there's a knot at this position
+        List<LeashKnotEntity> leashKnotEntities = world.getEntitiesByClass(
+            LeashKnotEntity.class,
+            new net.minecraft.util.math.Box(pos),
+            e -> e.getAttachedBlockPos().equals(pos)
+        );
+        var knot = !leashKnotEntities.isEmpty() ? leashKnotEntities.getFirst() : null;
+        // var heldByKnot = knot != null ? new HeldEntities(knot) : null;
+        var playerHoldsThisKnot = knot != null ? KnotInteractionHelper.isHoldingEntity(held, knot) : false;
+
+        if (held.isEmpty()) {
+            if (knot == null) {
+                knot = LeashKnotEntity.getOrCreate(world, pos);
                 knot.onPlace();
-                world.emitGameEvent(GameEvent.BLOCK_ATTACH, pos, GameEvent.Emitter.of(player));
-                cir.setReturnValue(ActionResult.SUCCESS);
+                cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: no connection, no knot");
+                return;
+            } else { 
+                cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: no connection, has knots");
+                return;
+            }
+        } else {
+            if (knot == null) {
+                knot = LeashKnotEntity.getOrCreate(world, pos);
+                knot.onPlace();
+                var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, false);
+                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, no knot");
+                cir.setReturnValue(result);
+                return;
+            } else if (playerHoldsThisKnot) {
+                cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, player holds knot");
+                return;
+            } else {
+                var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, true);
+                cir.setReturnValue(result);
+                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, entities held");
+                return;
             }
         }
     }

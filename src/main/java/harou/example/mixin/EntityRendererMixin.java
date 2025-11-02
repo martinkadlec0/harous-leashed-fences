@@ -59,7 +59,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
         
         // Check if any custom connected knots are visible
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
+        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
         
         if (!connectedKnots.isEmpty()) {
             Box thisBox = this.getBoundingBox(entity);
@@ -96,7 +96,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
         
         // Get custom connections
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot.getEntityWorld(), knot);
+        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
         
         if (connectedKnots.isEmpty()) {
             return; // No custom connections

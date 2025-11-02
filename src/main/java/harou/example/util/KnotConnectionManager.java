@@ -72,9 +72,10 @@ public class KnotConnectionManager {
      * Resolves UUIDs to actual entity instances in the world.
      * Also validates connections and removes invalid ones (too far, entity gone, etc.)
      */
-    public List<LeashKnotEntity> getConnectedKnots(World world, LeashKnotEntity self) {
+    public List<LeashKnotEntity> getConnectedKnots(LeashKnotEntity self) {
         List<LeashKnotEntity> connectedKnots = new ArrayList<>();
         Iterator<UUID> iterator = connectedKnotUuids.iterator();
+        World world = self.getEntityWorld();
         
         while (iterator.hasNext()) {
             UUID uuid = iterator.next();

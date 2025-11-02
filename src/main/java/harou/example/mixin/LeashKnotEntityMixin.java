@@ -4,6 +4,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Items;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
@@ -11,7 +12,9 @@ import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,10 +24,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import harou.example.LeashedFencesMod;
 import harou.example.api.CustomTickHandler;
 import harou.example.api.KnotConnectionAccess;
 import harou.example.network.KnotConnectionSyncS2CPacket;
 import harou.example.util.KnotConnectionManager;
+import harou.example.util.KnotInteractionActions;
 import harou.example.util.KnotInteractionHelper;
 import harou.example.util.KnotInteractionHelper.HeldEntities;
 
@@ -249,85 +254,55 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
      */
     @Inject(method = "interact", at = @At("HEAD"), cancellable = true)
     private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
+        LeashKnotEntity knot = (LeashKnotEntity)(Object)this;
 
         // Only on server side
-        if (self.getEntityWorld().isClient()) {
+        if (knot.getEntityWorld().isClient()) {
             return;
         }
-        
-        // Check what's attached to this knot via VANILLA system (mobs only, not custom fence connections)
-        // Custom fence connections are in KnotConnectionManager, not vanilla LeashData!
-        List<Leashable> vanillaAttachedEntities = Leashable.collectLeashablesHeldBy(self);
-        boolean knotHasMobs = vanillaAttachedEntities.stream()
-            .anyMatch(leashable -> !(leashable instanceof LeashKnotEntity));
-        
-        // If knot has mobs via vanilla system, ignore custom fence connections and use vanilla behavior
-        if (knotHasMobs) {
-            return; // Let vanilla handle mob interactions
+
+        if (player.getStackInHand(hand).isOf(Items.SHEARS)) {
+            return;
         }
-        
-        // Check for custom fence connections (separate from vanilla system)
-        List<LeashKnotEntity> customConnectedKnots = connectionManager.getConnectedKnots(self.getEntityWorld(), self);
-        boolean hasCustomFenceConnections = !customConnectedKnots.isEmpty();
-        
-        // === Check what player is holding ===
+
+        LeashedFencesMod.LOGGER.info(">>> LeashKnotEntityMixin");
+
+        // Collect ALL entities held by player
         HeldEntities held = new HeldEntities(player);
-        
-        // === CASE 1: Player is holding this knot (connected to player) ===
-        if (KnotInteractionHelper.isHoldingEntity(held, self)) {
-            // Clicking on knot that's connected to player - remove connection and drop lead
-            ((Leashable)self).detachLeash();
-            self.emitGameEvent(GameEvent.BLOCK_DETACH, player);
-            self.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
-            cir.setReturnValue(ActionResult.SUCCESS);
-            return;
-        }
-        
-        // === CASE 2: Player holding mobs - attach them to this knot ===
-        if (held.hasMobs) {
-            return; // Let vanilla handle attaching mobs to knot
-        }
-        
-        // === CASE 3: Check if player has lead in hand ===
-        boolean hasLead = KnotInteractionHelper.hasLeadItem(player, hand);
-        
-        // Lead + not holding anything + knot with custom connections = create player-to-knot connection
-        if (hasLead && held.isEmpty() && hasCustomFenceConnections) {
-            double distance = player.squaredDistanceTo(self);
-            if (distance <= 100.0) { // 10 blocks squared
-                ((Leashable)self).attachLeash(player, true);
-                self.onPlace();
-                self.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
-                self.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
-                cir.setReturnValue(ActionResult.SUCCESS);
+
+        // Check if there's a knot at this position
+        var heldByKnot = new HeldEntities(knot);
+        var playerHoldsThisKnot = KnotInteractionHelper.isHoldingEntity(held, knot);
+
+        if (held.isEmpty()) {
+            if (heldByKnot.hasMobs && !player.shouldCancelInteraction()) {
+                cir.setReturnValue(KnotInteractionActions.passMobsFromKnotToPlayer(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passMobsFromKnotToPlayer");
                 return;
-            }
-        }
-        
-        // Player holding knots - ALWAYS create fence-to-fence connections (custom system)
-        if (held.hasKnots) {
-            boolean wasCreated = KnotInteractionHelper.createCustomConnections(held, self, player, hasLead);
-            if (wasCreated) {
-                cir.setReturnValue(ActionResult.SUCCESS);
+            // Todo improve HeldEntities so we can avoid instanceof here
+            } else if (KnotInteractionHelper.hasLeadItem(player)) {
+                cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: connectKnotToPlayer");
                 return;
-            }
-        }
-        
-        // === CASE 4: Empty hand (no lead) + knot has custom fence connections ===
-        if (!hasLead && player.getStackInHand(hand).isEmpty() && hasCustomFenceConnections) {
-            // MODIFIER KEY (sneaking) = discard all connections and drop leads on ground
-            if (player.isSneaking()) {
-                KnotInteractionHelper.discardCustomConnections(self, player);
+            } else if (knot instanceof KnotConnectionAccess access && access.leashedFences$getConnectionManager().hasConnections()) { 
+                cir.setReturnValue(KnotInteractionActions.passKnotsFromKnotToPlayer(player, knot));
+                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passKnotsFromKnotToPlayer");
+                return;
             } else {
-                // NO MODIFIER = pick up connections and transition to vanilla (hold leads)
-                KnotInteractionHelper.pickupCustomConnections(self, player);
+                cir.setReturnValue(ActionResult.PASS);
+                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: PASS");
+                return;
             }
-            cir.setReturnValue(ActionResult.SUCCESS);
+        } else if (playerHoldsThisKnot) {            
+            cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
+            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: dropKnotToPlayerConnection");
+            return;
+        } else {
+            var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, true);
+            cir.setReturnValue(result);
+            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passLeadsFromPayerToKnot");
             return;
         }
-        
-        // No fence connections, let vanilla handle (pick up regular mobs if any)
     }
 }
 
