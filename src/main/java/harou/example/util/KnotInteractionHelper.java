@@ -9,6 +9,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.LeadItem;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.world.event.GameEvent;
@@ -192,9 +193,9 @@ public class KnotInteractionHelper {
      * Discard all custom connections from a knot and drop leads on ground.
      * Also removes connected knots if they have no remaining connections.
      */
-    public static void discardCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
+    public static boolean discardCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
         if (!(knot instanceof KnotConnectionAccess access)) {
-            return;
+            return false;
         }
         
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
@@ -218,22 +219,23 @@ public class KnotInteractionHelper {
         }
         
         // Drop leads on ground (even in creative mode)
-        if (knot.getEntityWorld() instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+        if (knot.getEntityWorld() instanceof ServerWorld serverWorld) {
             for (int i = 0; i < connectionCount; i++) {
                 knot.dropStack(serverWorld, new ItemStack(Items.LEAD), 0.0F);
             }
         }
         
         knot.emitGameEvent(GameEvent.BLOCK_DETACH, player);
-        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
+
+        return connectionCount > 0;
     }
     
     /**
      * Pick up custom connections and transition them to vanilla system (player holds the leads).
      */
-    public static void pickupCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
+    public static boolean pickupCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
         if (!(knot instanceof KnotConnectionAccess access)) {
-            return;
+            return false;
         }
         
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
@@ -259,7 +261,8 @@ public class KnotInteractionHelper {
         }
         
         knot.emitGameEvent(GameEvent.BLOCK_DETACH, player);
-        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
+
+        return connectedKnots.size() > 0;
     }
 }
 

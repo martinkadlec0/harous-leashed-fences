@@ -54,7 +54,7 @@ public class KnotInteractionActions {
                 leashable.attachLeash(player, true);
             }
         }
-        
+
         knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         return ActionResult.SUCCESS_SERVER;
     }
@@ -62,8 +62,10 @@ public class KnotInteractionActions {
     public static ActionResult passKnotsFromKnotToPlayer(PlayerEntity player, LeashKnotEntity knot) {
         if (!player.isSneaking()) {
             KnotInteractionHelper.pickupCustomConnections(knot, player);
+            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         } else {
             KnotInteractionHelper.discardCustomConnections(knot, player);;
+            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         }
         return ActionResult.SUCCESS_SERVER;
     }

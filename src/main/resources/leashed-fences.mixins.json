@@ -4,6 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"BlockAttachedEntityMixin",
+		"EntityMixin",
 		"EntityTrackerEntryMixin",
 		"FenceBlockMixin",
 		"LeashKnotEntityMixin",

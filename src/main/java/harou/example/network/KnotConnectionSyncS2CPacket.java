@@ -10,6 +10,7 @@ import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Uuids;
 
@@ -48,7 +49,7 @@ public record KnotConnectionSyncS2CPacket(int knotEntityId, Set<UUID> connectedK
      * Sends connection data for a knot to all players tracking it
      */
     public static void sendToTracking(LeashKnotEntity knot) {
-        if (!(knot.getEntityWorld() instanceof net.minecraft.server.world.ServerWorld serverWorld)) {
+        if (!(knot.getEntityWorld() instanceof ServerWorld serverWorld)) {
             return;
         }
         
@@ -63,7 +64,7 @@ public record KnotConnectionSyncS2CPacket(int knotEntityId, Set<UUID> connectedK
         
         // Send to all players tracking this entity using Fabric API
         // Get all players in the server and check if they're tracking this entity
-        for (net.minecraft.server.network.ServerPlayerEntity player : serverWorld.getServer().getPlayerManager().getPlayerList()) {
+        for (ServerPlayerEntity player : serverWorld.getServer().getPlayerManager().getPlayerList()) {
             // Check if player is close enough to be tracking this entity (within render distance)
             double distanceSquared = player.squaredDistanceTo(knot);
             if (distanceSquared < 4096.0) { // 64 blocks squared (typical entity tracking range)
