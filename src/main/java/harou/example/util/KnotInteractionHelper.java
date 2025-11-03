@@ -10,7 +10,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.LeadItem;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.world.event.GameEvent;
 
@@ -193,7 +192,7 @@ public class KnotInteractionHelper {
      * Discard all custom connections from a knot and drop leads on ground.
      * Also removes connected knots if they have no remaining connections.
      */
-    public static boolean discardCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
+    public static boolean discardCustomConnections(LeashKnotEntity knot, Entity player) {
         if (!(knot instanceof KnotConnectionAccess access)) {
             return false;
         }
@@ -233,7 +232,7 @@ public class KnotInteractionHelper {
     /**
      * Pick up custom connections and transition them to vanilla system (player holds the leads).
      */
-    public static boolean pickupCustomConnections(LeashKnotEntity knot, PlayerEntity player) {
+    public static boolean pickupCustomConnections(LeashKnotEntity knot, Entity player) {
         if (!(knot instanceof KnotConnectionAccess access)) {
             return false;
         }

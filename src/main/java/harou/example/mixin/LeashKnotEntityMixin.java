@@ -174,13 +174,7 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     @Inject(method = "onBreak", at = @At("HEAD"))
     private void onBreakHead(ServerWorld world, Entity breaker, CallbackInfo ci) {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-        
-        if (connectionManager.hasConnections()) {
-            connectionManager.clearAllConnections(world, self);
-            
-            // Send update to clients
-            KnotConnectionSyncS2CPacket.sendToTracking(self);
-        }
+        KnotInteractionHelper.discardCustomConnections(self, breaker);
     }
 
     /**
