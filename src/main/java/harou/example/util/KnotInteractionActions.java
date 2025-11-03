@@ -15,6 +15,7 @@ public class KnotInteractionActions {
             KnotInteractionHelper.consumeLead(player);
             ((Leashable)knot).attachLeash(player, true);
             knot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
+            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
             return ActionResult.SUCCESS;
         }
         return ActionResult.PASS;
@@ -23,10 +24,11 @@ public class KnotInteractionActions {
     public static ActionResult dropKnotToPlayerConnection(PlayerEntity player, LeashKnotEntity knot) {
         ((Leashable)knot).detachLeash();
         knot.emitGameEvent(GameEvent.BLOCK_DETACH, player);
+        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         return ActionResult.SUCCESS_SERVER;
     }
 
-    public static ActionResult passLeadsFromPayerToKnot(PlayerEntity player, LeashKnotEntity knot, boolean playSound) {
+    public static ActionResult passLeadsFromPlayerToKnot(PlayerEntity player, LeashKnotEntity knot, boolean playSound) {
         HeldEntities held = new HeldEntities(player);
 
         boolean newCustomConnection = KnotInteractionHelper.createCustomConnections(
@@ -52,6 +54,8 @@ public class KnotInteractionActions {
                 leashable.attachLeash(player, true);
             }
         }
+        
+        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         return ActionResult.SUCCESS_SERVER;
     }
 

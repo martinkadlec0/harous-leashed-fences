@@ -138,8 +138,6 @@ public class KnotInteractionHelper {
         if (createdConnection) {
             // Play sounds and emit events
             KnotConnectionSyncS2CPacket.sendToTracking(targetKnot);
-            // targetKnot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
-            // targetKnot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
             return true;
         } 
         

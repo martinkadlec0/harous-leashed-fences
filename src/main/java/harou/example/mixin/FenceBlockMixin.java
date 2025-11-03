@@ -9,17 +9,13 @@ import harou.example.util.KnotInteractionHelper;
 import harou.example.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
-import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.LeadItem;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -72,7 +68,7 @@ public class FenceBlockMixin {
                 knot = LeashKnotEntity.getOrCreate(world, pos);
                 knot.onPlace();
             }
-            var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, !newKnot);
+            var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, !newKnot);
             cir.setReturnValue(result);
             LeashedFencesMod.LOGGER.info("<<< FenceBlockMixin: SUCCESS_SERVER 2");
             return;

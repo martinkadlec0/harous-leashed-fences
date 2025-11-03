@@ -83,7 +83,7 @@ public class LeadItemMixin {
             if (knot == null) {
                 knot = LeashKnotEntity.getOrCreate(world, pos);
                 knot.onPlace();
-                var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, false);
+                var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, false);
                 LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, no knot");
                 cir.setReturnValue(result);
                 return;
@@ -92,7 +92,7 @@ public class LeadItemMixin {
                 LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, player holds knot");
                 return;
             } else {
-                var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, true);
+                var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, true);
                 cir.setReturnValue(result);
                 LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, entities held");
                 return;

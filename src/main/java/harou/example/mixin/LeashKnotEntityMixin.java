@@ -7,15 +7,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -298,9 +294,9 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
             LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: dropKnotToPlayerConnection");
             return;
         } else {
-            var result = KnotInteractionActions.passLeadsFromPayerToKnot(player, knot, true);
+            var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, true);
             cir.setReturnValue(result);
-            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passLeadsFromPayerToKnot");
+            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passLeadsFromPlayerToKnot");
             return;
         }
     }
