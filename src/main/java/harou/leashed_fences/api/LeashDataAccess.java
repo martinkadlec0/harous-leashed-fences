@@ -1,4 +1,4 @@
-package harou.example.api;
+package harou.leashed_fences.api;
 
 /**
  * Accessor interface to add custom fields to LeashData.

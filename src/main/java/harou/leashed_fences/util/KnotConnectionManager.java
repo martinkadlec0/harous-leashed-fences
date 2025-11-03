@@ -1,6 +1,6 @@
-package harou.example.util;
+package harou.leashed_fences.util;
 
-import harou.example.network.KnotConnectionSyncS2CPacket;
+import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIntArray;
@@ -234,7 +234,7 @@ public class KnotConnectionManager {
      * Helper to get the connection manager from a LeashKnotEntity
      */
     private static KnotConnectionManager getManager(LeashKnotEntity knot) {
-        if (knot instanceof harou.example.api.KnotConnectionAccess access) {
+        if (knot instanceof harou.leashed_fences.api.KnotConnectionAccess access) {
             return access.leashedFences$getConnectionManager();
         }
         throw new IllegalStateException("LeashKnotEntity does not implement KnotConnectionAccess!");

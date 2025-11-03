@@ -1,9 +1,9 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.LeashedFencesMod;
-import harou.example.util.KnotInteractionActions;
-import harou.example.util.KnotInteractionHelper;
-import harou.example.util.KnotInteractionHelper.HeldEntities;
+import harou.leashed_fences.LeashedFencesMod;
+import harou.leashed_fences.util.KnotInteractionActions;
+import harou.leashed_fences.util.KnotInteractionHelper;
+import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
 import net.minecraft.entity.decoration.LeashKnotEntity;

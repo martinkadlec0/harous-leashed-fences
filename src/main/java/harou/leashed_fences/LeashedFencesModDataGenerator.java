@@ -1,4 +1,4 @@
-package harou.example;
+package harou.leashed_fences;
 
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;

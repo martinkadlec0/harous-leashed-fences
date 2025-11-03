@@ -1,7 +1,7 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.api.KnotConnectionAccess;
-import harou.example.util.KnotConnectionManager;
+import harou.leashed_fences.api.KnotConnectionAccess;
+import harou.leashed_fences.util.KnotConnectionManager;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.state.EntityRenderState;

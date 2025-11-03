@@ -1,7 +1,7 @@
-package harou.example.util;
+package harou.leashed_fences.util;
 
-import harou.example.api.KnotConnectionAccess;
-import harou.example.network.KnotConnectionSyncS2CPacket;
+import harou.leashed_fences.api.KnotConnectionAccess;
+import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;

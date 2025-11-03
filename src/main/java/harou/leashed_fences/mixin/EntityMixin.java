@@ -1,12 +1,10 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.LeashedFencesMod;
-import harou.example.util.KnotInteractionHelper;
+import harou.leashed_fences.LeashedFencesMod;
+import harou.leashed_fences.util.KnotInteractionHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;

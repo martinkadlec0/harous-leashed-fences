@@ -1,4 +1,4 @@
-package harou.example.api;
+package harou.leashed_fences.api;
 
 /**
  * Interface for entities that want to add custom tick logic after BlockAttachedEntity.tick() runs.

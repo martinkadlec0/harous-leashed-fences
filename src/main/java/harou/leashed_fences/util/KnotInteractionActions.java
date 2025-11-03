@@ -1,6 +1,6 @@
-package harou.example.util;
+package harou.leashed_fences.util;
 
-import harou.example.util.KnotInteractionHelper.HeldEntities;
+import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;

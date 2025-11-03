@@ -1,6 +1,6 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.api.LeashDataAccess;
+import harou.leashed_fences.api.LeashDataAccess;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.command.LeashCommandRenderer;

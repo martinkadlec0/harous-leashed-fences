@@ -16,7 +16,6 @@
 # TODO
 - Investigate: To make sure we are not missing something
     - Leashable.tickLeash
-    - onmHeldLeashUpdate
-- Investigate: Does $ in mixin field names have special funcionality or is it just a wayto indicate?
+    - onHeldLeashUpdate
 - Refactor: LeashData isKnotConnection
 - Feature: Mod Menu droop config

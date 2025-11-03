@@ -1,6 +1,6 @@
-package harou.example;
+package harou.leashed_fences;
 
-import harou.example.network.KnotConnectionSyncS2CPacket;
+import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 

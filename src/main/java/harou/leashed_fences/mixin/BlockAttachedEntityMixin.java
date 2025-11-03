@@ -1,6 +1,6 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.api.CustomTickHandler;
+import harou.leashed_fences.api.CustomTickHandler;
 import net.minecraft.entity.decoration.BlockAttachedEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

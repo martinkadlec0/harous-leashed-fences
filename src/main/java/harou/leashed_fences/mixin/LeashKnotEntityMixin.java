@@ -1,4 +1,4 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -22,14 +22,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import harou.example.LeashedFencesMod;
-import harou.example.api.CustomTickHandler;
-import harou.example.api.KnotConnectionAccess;
-import harou.example.network.KnotConnectionSyncS2CPacket;
-import harou.example.util.KnotConnectionManager;
-import harou.example.util.KnotInteractionActions;
-import harou.example.util.KnotInteractionHelper;
-import harou.example.util.KnotInteractionHelper.HeldEntities;
+import harou.leashed_fences.LeashedFencesMod;
+import harou.leashed_fences.api.CustomTickHandler;
+import harou.leashed_fences.api.KnotConnectionAccess;
+import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
+import harou.leashed_fences.util.KnotConnectionManager;
+import harou.leashed_fences.util.KnotInteractionActions;
+import harou.leashed_fences.util.KnotInteractionHelper;
+import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 
 import java.util.List;
 

@@ -1,11 +1,10 @@
-package harou.example.mixin;
+package harou.leashed_fences.mixin;
 
-import harou.example.LeashedFencesMod;
-import harou.example.util.KnotInteractionActions;
-import harou.example.util.KnotInteractionHelper;
-import harou.example.util.KnotInteractionHelper.HeldEntities;
+import harou.leashed_fences.LeashedFencesMod;
+import harou.leashed_fences.util.KnotInteractionActions;
+import harou.leashed_fences.util.KnotInteractionHelper;
+import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemUsageContext;
@@ -14,7 +13,6 @@ import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 
 import java.util.List;
 

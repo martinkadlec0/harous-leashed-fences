@@ -1,6 +1,6 @@
-package harou.example.api;
+package harou.leashed_fences.api;
 
-import harou.example.util.KnotConnectionManager;
+import harou.leashed_fences.util.KnotConnectionManager;
 
 /**
  * Interface to access the custom connection manager from LeashKnotEntity.

@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "leashed-fences",
 	"version": "${version}",
-	"name": "Leashed Fences",
+	"name": "Harou's Leashed Fences",
 	"description": "Allows to leash two fences together!",
 	"authors": [
 		"BSHarou"
@@ -17,13 +17,13 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"harou.example.LeashedFencesMod"
+			"harou.leashed_fences.LeashedFencesMod"
 		],
 		"client": [
-			"harou.example.LeashedFencesModClient"
+			"harou.leashed_fences.LeashedFencesModClient"
 		],
 		"fabric-datagen": [
-			"harou.example.LeashedFencesModDataGenerator"
+			"harou.leashed_fences.LeashedFencesModDataGenerator"
 		]
 	},
 	"mixins": [
