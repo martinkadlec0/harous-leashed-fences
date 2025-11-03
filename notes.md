@@ -14,8 +14,9 @@
 - Therefore, an entity can be holder of multiple entities, BUT each entity can have only one holder
 
 # TODO
-- Investigate: Knot removal when fence is destroyed (Vanilla does something I don't know about)
-    - Maybe Leashable.tickLeash?
+- Investigate: To make sure we are not missing something
+    - Leashable.tickLeash
+    - onmHeldLeashUpdate
 - Investigate: Does $ in mixin field names have special funcionality or is it just a wayto indicate?
 - Refactor: LeashData isKnotConnection
 - Feature: Mod Menu droop config

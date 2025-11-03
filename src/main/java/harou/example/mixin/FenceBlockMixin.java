@@ -1,9 +1,6 @@
 package harou.example.mixin;
 
 import harou.example.LeashedFencesMod;
-import harou.example.api.KnotConnectionAccess;
-import harou.example.network.KnotConnectionSyncS2CPacket;
-import harou.example.util.KnotConnectionManager;
 import harou.example.util.KnotInteractionActions;
 import harou.example.util.KnotInteractionHelper;
 import harou.example.util.KnotInteractionHelper.HeldEntities;

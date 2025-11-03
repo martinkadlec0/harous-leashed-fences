@@ -63,40 +63,42 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         }
         
         // Show which system(s) are active for this knot (debug display)
-        boolean heldByPlayer = leashData != null && leashData.leashHolder != null;
-        List<Leashable> vanillaHolding = Leashable.collectLeashablesHeldBy(self);
-        int vanillaMobCount = (int) vanillaHolding.stream().filter(l -> !(l instanceof LeashKnotEntity)).count();
-        int vanillaKnotCount = (int) vanillaHolding.stream().filter(l -> l instanceof LeashKnotEntity).count();
-        int customConnections = connectionManager.getConnectionCount();
-        
-        StringBuilder name = new StringBuilder();   
-        
-        // Show vanilla system status
-        if (heldByPlayer) {
-            var holderName = leashData.leashHolder.getName().getString();
-            name.append("H:" + holderName);
+        if (LeashedFencesMod.SHOW_DEBUG_NAMES) {
+            boolean heldByPlayer = leashData != null && leashData.leashHolder != null;
+            List<Leashable> vanillaHolding = Leashable.collectLeashablesHeldBy(self);
+            int vanillaMobCount = (int) vanillaHolding.stream().filter(l -> !(l instanceof LeashKnotEntity)).count();
+            int vanillaKnotCount = (int) vanillaHolding.stream().filter(l -> l instanceof LeashKnotEntity).count();
+            int customConnections = connectionManager.getConnectionCount();
+            
+            StringBuilder name = new StringBuilder();   
+            
+            // Show vanilla system status
+            if (heldByPlayer) {
+                var holderName = leashData.leashHolder.getName().getString();
+                name.append("H:" + holderName);
+            }
+            if (vanillaMobCount > 0) {
+                if (name.length() > 0) name.append(" | ");
+                name.append("V:").append(vanillaMobCount).append("mobs");
+            }
+            if (vanillaKnotCount > 0) {
+                if (name.length() > 0) name.append(" | ");
+                name.append("V:").append(vanillaKnotCount).append("knots");
+            }
+            
+            // Show custom system status
+            if (customConnections > 0) {
+                if (name.length() > 0) name.append(" | ");
+                name.append("C:").append(customConnections).append("fences");
+            }
+            
+            if (name.length() == 0) {
+                name.append("Empty");
+            }
+            
+            self.setCustomName(Text.of(name.toString()));
+            self.setCustomNameVisible(true);
         }
-        if (vanillaMobCount > 0) {
-            if (name.length() > 0) name.append(" | ");
-            name.append("V:").append(vanillaMobCount).append("mobs");
-        }
-        if (vanillaKnotCount > 0) {
-            if (name.length() > 0) name.append(" | ");
-            name.append("V:").append(vanillaKnotCount).append("knots");
-        }
-        
-        // Show custom system status
-        if (customConnections > 0) {
-            if (name.length() > 0) name.append(" | ");
-            name.append("C:").append(customConnections).append("fences");
-        }
-        
-        if (name.length() == 0) {
-            name.append("Empty");
-        }
-        
-        self.setCustomName(Text.of(name.toString()));
-        self.setCustomNameVisible(true);
     }
 
     /**
