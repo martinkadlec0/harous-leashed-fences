@@ -1,6 +1,7 @@
 package harou.example.mixin;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -9,6 +10,7 @@ import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
@@ -93,7 +95,7 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
             name.append("Empty");
         }
         
-        self.setCustomName(net.minecraft.text.Text.of(name.toString()));
+        self.setCustomName(Text.of(name.toString()));
         self.setCustomNameVisible(true);
     }
 
@@ -105,7 +107,7 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     @Nullable
     protected String getSavedEntityId() {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-        return net.minecraft.entity.EntityType.getId(self.getType()).toString();
+        return EntityType.getId(self.getType()).toString();
     }
 
     @Override
@@ -173,6 +175,7 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
      */
     @Inject(method = "onBreak", at = @At("HEAD"))
     private void onBreakHead(ServerWorld world, Entity breaker, CallbackInfo ci) {
+        LeashedFencesMod.LOGGER.info(">>> LeashKnotEntityMixin: onBreakHead");
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         KnotInteractionHelper.discardCustomConnections(self, breaker);
     }

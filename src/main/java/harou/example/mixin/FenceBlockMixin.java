@@ -81,6 +81,7 @@ public class FenceBlockMixin {
      * TODO: This also happens on tick every ~5s, but Vanilla somehow manages to be quicker, how?
      */
     protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
+        LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin: onStateReplaced");
         // Find any knot at this position
         List<LeashKnotEntity> knots = world.getEntitiesByClass(
             LeashKnotEntity.class,
@@ -90,15 +91,6 @@ public class FenceBlockMixin {
         
         for (LeashKnotEntity knot : knots) {
             // Clean up custom connections
-            if (knot instanceof KnotConnectionAccess access) {
-                KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-                if (manager.hasConnections()) {
-                    manager.clearAllConnections(world, knot);
-                    KnotConnectionSyncS2CPacket.sendToTracking(knot);
-                }
-            }
-            
-            // Discard the knot and play sound
             knot.discard();
             knot.onBreak(world, null);
         }
