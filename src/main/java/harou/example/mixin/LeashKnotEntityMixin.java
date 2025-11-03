@@ -67,11 +67,12 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
         int vanillaKnotCount = (int) vanillaHolding.stream().filter(l -> l instanceof LeashKnotEntity).count();
         int customConnections = connectionManager.getConnectionCount();
         
-        StringBuilder name = new StringBuilder();
+        StringBuilder name = new StringBuilder();   
         
         // Show vanilla system status
         if (heldByPlayer) {
-            name.append("V:Player");
+            var holderName = leashData.leashHolder.getName().getString();
+            name.append("H:" + holderName);
         }
         if (vanillaMobCount > 0) {
             if (name.length() > 0) name.append(" | ");
@@ -275,7 +276,6 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
                 cir.setReturnValue(KnotInteractionActions.passMobsFromKnotToPlayer(player, knot));
                 LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passMobsFromKnotToPlayer");
                 return;
-            // Todo improve HeldEntities so we can avoid instanceof here
             } else if (KnotInteractionHelper.hasLeadItem(player)) {
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
                 LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: connectKnotToPlayer");

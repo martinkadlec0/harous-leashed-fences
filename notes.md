@@ -14,18 +14,10 @@
 - Therefore, an entity can be holder of multiple entities, BUT each entity can have only one holder
 
 # TODO
-- Investiage: When having mob connection (but not having lead in hand) and interacting with fence or another mob, what code handles that?
-    - It is Entity.interact
-- Fix: Shears should remove knot connection
-- Fix: Leashing knot to another knot that already hos mobs attached
-- Fix: Leashing knot to a happy ghost using shift+click
-- Fix: Respect drop rule for leads:
-    world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)
+- Fix: knots destroyed by projectile/punching don't drop knot-to-knot leads
 - Investigate: Knot removal when fence is destroyed (Vanilla does something I don't know about)
     - Maybe Leashable.tickLeash?
-- Investigate: Can we handle LeadItem interaction on fence/entity?
 - Investigate: Does $ in mixin field names have special funcionality or is it just a wayto indicate?
-- Refactor: Clearer var. names - Player holding lead item vs Player having lead connection
 - Refactor: LeashData isKnotConnection
 - Feature: Mod Menu droop config
 
