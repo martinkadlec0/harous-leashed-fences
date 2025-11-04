@@ -219,25 +219,16 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
      */
     @Inject(method = "onHeldLeashUpdate", at = @At("HEAD"), cancellable = true)
     private void onOnHeldLeashUpdate(Leashable heldLeashable, CallbackInfo ci) {
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
+        LeashKnotEntity knot = (LeashKnotEntity)(Object)this;
         
         // Check if this knot still has entities held by it OR is being leashed to something OR has custom connections
-        boolean hasHeldEntities = !Leashable.collectLeashablesHeldBy(self).isEmpty();
+        boolean hasHeldEntities = !Leashable.collectLeashablesHeldBy(knot).isEmpty();
         boolean isBeingLeashed = this.isLeashed();
-        boolean hasCustomConnections = connectionManager.hasConnections();
+        boolean hasKnotToKnotConnections = connectionManager.hasConnections();
         
-        // Only discard if the knot is completely unused (not holding anything, not being held, and no custom connections)
-        if (!hasHeldEntities && !isBeingLeashed && !hasCustomConnections) {
-            // Clean up all custom connections before discarding
-            connectionManager.clearAllConnections(self.getEntityWorld(), self);
-            
-            // Send update to clients
-            if (!self.getEntityWorld().isClient()) {
-                KnotConnectionSyncS2CPacket.sendToTracking(self);
-            }
-            
-            // Now discard the knot
-            self.discard();
+        // Only discard if the knot is completely unused (not holding anything, not being held, and no knot-to-knot connections)
+        if (!hasHeldEntities && !isBeingLeashed && !hasKnotToKnotConnections) {
+            knot.discard();
         }
         
         // Cancel vanilla behavior - we've handled it ourselves

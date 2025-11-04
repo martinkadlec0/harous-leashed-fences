@@ -14,8 +14,5 @@
 - Therefore, an entity can be holder of multiple entities, BUT each entity can have only one holder
 
 # TODO
-- Investigate: To make sure we are not missing something
-    - Leashable.tickLeash
-    - onHeldLeashUpdate
-- Refactor: LeashData isKnotConnection
 - Feature: Mod Menu droop config
+- Go through modded behaviour to QA

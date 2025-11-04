@@ -75,7 +75,6 @@ public class FenceBlockMixin {
 
     /**
      * Override onStateReplaced to immediately remove knots when the fence is broken.
-     * TODO: This also happens on tick every ~5s, but Vanilla somehow manages to be quicker, how?
      */
     protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
         LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin: onStateReplaced");
@@ -86,6 +85,7 @@ public class FenceBlockMixin {
             knot -> knot.getAttachedBlockPos().equals(pos)
         );
         
+        // This should be always just one knot (or none) as there can't be multiple knots at the same position
         for (LeashKnotEntity knot : knots) {
             // Clean up custom connections
             knot.discard();

@@ -64,7 +64,7 @@ public class KnotInteractionActions {
             KnotInteractionHelper.pickupCustomConnections(knot, player);
             knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         } else {
-            KnotInteractionHelper.discardCustomConnections(knot, player);;
+            KnotInteractionHelper.discardCustomConnections(knot, player);
             knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
         }
         return ActionResult.SUCCESS_SERVER;
