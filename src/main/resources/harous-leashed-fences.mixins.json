@@ -3,7 +3,6 @@
 	"package": "harou.leashed_fences.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"BlockAttachedEntityMixin",
 		"EntityMixin",
 		"EntityTrackerEntryMixin",
 		"FenceBlockMixin",

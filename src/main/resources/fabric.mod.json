@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "leashed-fences",
+	"id": "harous-leashed-fences",
 	"version": "${version}",
 	"name": "Harou's Leashed Fences",
 	"description": "Allows to leash two fences together!",
@@ -27,9 +27,9 @@
 		]
 	},
 	"mixins": [
-		"leashed-fences.mixins.json"
+		"harous-leashed-fences.mixins.json"
 	],
-	"accessWidener": "leashed-fences.accesswidener",
+	"accessWidener": "harous-leashed-fences.accesswidener",
 	"depends": {
 		"fabricloader": ">=0.17.2",
 		"minecraft": "~1.21.10",

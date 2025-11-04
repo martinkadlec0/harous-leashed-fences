@@ -3,6 +3,7 @@ package harou.leashed_fences.mixin;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Leashable;
+import net.minecraft.entity.decoration.BlockAttachedEntity;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
@@ -14,6 +15,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -23,7 +26,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import harou.leashed_fences.LeashedFencesMod;
-import harou.leashed_fences.api.CustomTickHandler;
 import harou.leashed_fences.api.KnotConnectionAccess;
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import harou.leashed_fences.util.KnotConnectionManager;
@@ -38,7 +40,11 @@ import java.util.List;
  * and adds custom connection system for persistent knot-to-knot connections.
  */
 @Mixin(LeashKnotEntity.class)
-public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionAccess, CustomTickHandler {
+public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implements Leashable, KnotConnectionAccess {
+
+    public LeashKnotEntityMixin(EntityType<? extends LeashKnotEntity> entityType, World world) {
+		super(entityType, world);
+	}
     
     @Unique
     private Leashable.LeashData leashData;
@@ -52,7 +58,9 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
     }
 
     @Override
-    public void onCustomTick() {
+    public void tick() {
+        super.tick();
+
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         
         // Handle vanilla leash distance checking (when this knot is being held by a player)
@@ -107,6 +115,7 @@ public abstract class LeashKnotEntityMixin implements Leashable, KnotConnectionA
      * The access widener makes this method overridable by removing the final modifier.
      */
     @Nullable
+    @Override
     protected String getSavedEntityId() {
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         return EntityType.getId(self.getType()).toString();
