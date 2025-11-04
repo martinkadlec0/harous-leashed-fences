@@ -186,7 +186,6 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
      */
     @Inject(method = "onBreak", at = @At("HEAD"))
     private void onBreakHead(ServerWorld world, Entity breaker, CallbackInfo ci) {
-        LeashedFencesMod.LOGGER.info(">>> LeashKnotEntityMixin: onBreakHead");
         LeashKnotEntity self = (LeashKnotEntity)(Object)this;
         KnotInteractionHelper.discardCustomConnections(self, breaker);
     }
@@ -261,8 +260,6 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
             return;
         }
 
-        LeashedFencesMod.LOGGER.info(">>> LeashKnotEntityMixin");
-
         // Collect ALL entities held by player
         HeldEntities held = new HeldEntities(player);
 
@@ -273,29 +270,23 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
         if (held.isEmpty()) {
             if (heldByKnot.hasMobs && !player.shouldCancelInteraction()) {
                 cir.setReturnValue(KnotInteractionActions.passMobsFromKnotToPlayer(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passMobsFromKnotToPlayer");
                 return;
             } else if (KnotInteractionHelper.hasLeadItem(player)) {
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: connectKnotToPlayer");
                 return;
             } else if (knot instanceof KnotConnectionAccess access && access.leashedFences$getConnectionManager().hasConnections()) { 
                 cir.setReturnValue(KnotInteractionActions.passKnotsFromKnotToPlayer(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passKnotsFromKnotToPlayer");
                 return;
             } else {
                 cir.setReturnValue(ActionResult.PASS);
-                LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: PASS");
                 return;
             }
         } else if (playerHoldsThisKnot) {            
             cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
-            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: dropKnotToPlayerConnection");
             return;
         } else {
             var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, true);
             cir.setReturnValue(result);
-            LeashedFencesMod.LOGGER.info("<<< LeashKnotEntityMixin: passLeadsFromPlayerToKnot");
             return;
         }
     }

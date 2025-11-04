@@ -1,6 +1,5 @@
 package harou.leashed_fences.mixin;
 
-import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.util.KnotInteractionActions;
 import harou.leashed_fences.util.KnotInteractionHelper;
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
@@ -49,8 +48,6 @@ public class LeadItemMixin {
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
-
-        LeashedFencesMod.LOGGER.info(">>> LeadItemMixin");
         
         // Collect ALL entities held by player
         HeldEntities held = new HeldEntities(player);
@@ -70,11 +67,9 @@ public class LeadItemMixin {
                 knot = LeashKnotEntity.getOrCreate(world, pos);
                 knot.onPlace();
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: no connection, no knot");
                 return;
             } else { 
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: no connection, has knots");
                 return;
             }
         } else {
@@ -84,19 +79,16 @@ public class LeadItemMixin {
                 var result = player.isSneaking()
                     ? KnotInteractionActions.connectKnotToPlayer(player, knot)
                     : KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, false);
-                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, no knot");
                 cir.setReturnValue(result);
                 return;
             } else if (playerHoldsThisKnot) {
                 cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
-                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, player holds knot");
                 return;
             } else {
                 var result = player.isSneaking()
                     ? KnotInteractionActions.connectKnotToPlayer(player, knot)
                     : KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, true);
                 cir.setReturnValue(result);
-                LeashedFencesMod.LOGGER.info("<<< LeadItemMixin: connection, entities held");
                 return;
             }
         }

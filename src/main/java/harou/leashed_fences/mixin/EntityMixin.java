@@ -1,6 +1,5 @@
 package harou.leashed_fences.mixin;
 
-import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.util.KnotInteractionHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.LeashKnotEntity;
@@ -33,7 +32,6 @@ public class EntityMixin {
         var removedAny = KnotInteractionHelper.discardCustomConnections(knot, player);
         
         if (removedAny) {     
-            LeashedFencesMod.LOGGER.info("<<< some removed");       
             if (!cir.getReturnValue()) {
                 cir.setReturnValue(true);
                 self.emitGameEvent(GameEvent.SHEAR, player);

@@ -1,6 +1,5 @@
 package harou.leashed_fences.mixin;
 
-import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.util.KnotInteractionActions;
 import harou.leashed_fences.util.KnotInteractionHelper;
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
@@ -30,7 +29,6 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
 
     public FenceBlockMixin(Settings settings) {
 		super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, settings);
-        LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin Constructor");
 	}
     
     @Inject(method = "onUse", at = @At("HEAD"), cancellable = true)
@@ -39,8 +37,6 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
             cir.setReturnValue(ActionResult.SUCCESS);
             return;
         }
-
-        LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin");
         
         // Collect ALL entities held by player first
         HeldEntities held = new HeldEntities(player);
@@ -60,11 +56,9 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
             // No knot / helds mobs / helds knot -> PASS
             // Player picks up mobs only when interacting directly with a Knot
             cir.setReturnValue(ActionResult.PASS);
-            LeashedFencesMod.LOGGER.info("<<< FenceBlockMixin: PASS");
             return;
         } else if (playerHoldsThisKnot) {            
             cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
-            LeashedFencesMod.LOGGER.info("<<< FenceBlockMixin: SUCCESS_SERVER 1");
             return;
         } else {
             if (knot == null) {
@@ -73,7 +67,6 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
             }
             var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, !newKnot);
             cir.setReturnValue(result);
-            LeashedFencesMod.LOGGER.info("<<< FenceBlockMixin: SUCCESS_SERVER 2");
             return;
         }
         
@@ -84,7 +77,6 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
      */
     @Override
     protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
-        LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin: onStateReplaced");
         // Find any knot at this position
         List<LeashKnotEntity> knots = world.getEntitiesByClass(
             LeashKnotEntity.class,
