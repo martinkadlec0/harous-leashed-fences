@@ -1,4 +1,4 @@
-package harou.leashed_fences.mixin;
+package harou.leashed_fences.mixin.client;
 
 import harou.leashed_fences.api.LeashDataAccess;
 import net.minecraft.client.render.LightmapTextureManager;
@@ -19,7 +19,7 @@ public class LeashCommandRendererMixin {
     
     /**
      * @author Harou
-     * @reason Add distance-based droop effect to knot-to-knot connections only
+     * @reason Add extra slack effect to same Y knot-to-knot connections
      */
     @Overwrite
     private static void render(
@@ -51,10 +51,10 @@ public class LeashCommandRendererMixin {
 			o = offsetY * f;
 		}
 
-        // Add droop effect based on horizontal distance (only for knot-to-knot connections)
-        if (data instanceof LeashDataAccess access && access.leashedFences$isKnotToKnot()) {
+        // Add extra slack effect based on horizontal distance (only for same Y knot-to-knot connections)
+        if (offsetY == 0.0F && data instanceof LeashDataAccess access && access.leashedFences$isKnotToKnot()) {
             float horizontalDistance = (float)Math.sqrt(offsetX * offsetX + offsetZ * offsetZ);
-            float maxDroop = 0.1F;
+            float maxDroop = 0.15F;
             float distanceScale = 0.05F;
             float droop = -maxDroop * f * (1.0F - f) * 4.0F / (1.0F + horizontalDistance * distanceScale);
             o += droop;

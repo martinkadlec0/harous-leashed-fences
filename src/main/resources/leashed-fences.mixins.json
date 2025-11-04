@@ -11,9 +11,9 @@
 		"LeadItemMixin"
 	],
 	"client": [
-		"EntityRendererMixin",
-		"LeashCommandRendererMixin",
-		"LeashDataMixin"
+		"client.EntityRendererMixin",
+		"client.LeashCommandRendererMixin",
+		"client.LeashDataMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

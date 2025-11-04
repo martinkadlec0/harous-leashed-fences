@@ -1,4 +1,4 @@
-package harou.leashed_fences.mixin;
+package harou.leashed_fences.mixin.client;
 
 import harou.leashed_fences.api.LeashDataAccess;
 import net.minecraft.client.render.entity.state.EntityRenderState;

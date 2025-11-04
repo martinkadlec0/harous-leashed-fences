@@ -1,6 +1,7 @@
-package harou.leashed_fences.mixin;
+package harou.leashed_fences.mixin.client;
 
 import harou.leashed_fences.api.KnotConnectionAccess;
+import harou.leashed_fences.api.LeashDataAccess;
 import harou.leashed_fences.util.KnotConnectionManager;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.entity.EntityRenderer;
@@ -152,6 +153,8 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
             leashData.leashedEntitySkyLight = knotSkyLight;
             leashData.leashHolderSkyLight = connectedKnotSkyLight;
             leashData.slack = true; // Knots are stationary, can have some slack
+
+            ((LeashDataAccess)leashData).leashedFences$setIsKnotToKnot(true);
             
             newLeashDatas.add(leashData);
         }
