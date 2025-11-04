@@ -39,10 +39,10 @@
             - Modifier interact with fence: New knot is created and connected to player
         - Fence has knot attached to mobs
             - If this happens, any connections to other knots are ignored and left as they are
-            - Interact with fence: Nothing happens
-            - Modifier interact with fence: Nothing happens
+            - Interact with fence: New connection with player
+            - Modifier interact with fence: New connection with player
             - Interact with knot: Player picks up all leads attached to mobs
-            - Modifier interact with knot: Nothing happens
+            - Modifier interact with knot: New connection with player
         - Fence has knot attached to another fence
             - Interact with fence: New connection is created between the knot and player
             - Modifier interact with fence: New connnection is created between the knot and player
@@ -57,12 +57,12 @@
         - Fence has knot attached to mobs
             - If this happens, any connections to other knots are ignored and left as they are
             - Interact with fence: All mobs player holds are moved to the existing knot
-            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: New connection is created between the knot and player
             - Interact with knot: All mobs player holds are moved to the existing knot
             - Modifier interact with knot: All mobs player holds are moved to the existing knot
         - Fence has knot attached to another fence
             - If this happens, any connections to other knots are ignored and left as they are
             - Interact with fence: All mobs player holds are moved to the existing knot
-            - Modifier interact with fence: All mobs player holds are moved to the existing knot
+            - Modifier interact with fence: New connection is created between the knot and player
             - Interact with knot: All mobs player holds are moved to the existing knot
             - Modifier interact with knot: All mobs player holds are moved to the existing knot

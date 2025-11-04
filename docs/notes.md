@@ -8,11 +8,5 @@
 - Is the player interactoin with knot on fence, or the fence itself?
 - What about off-hand?
 
-
-# LeashData
-- Entity has leash data if it is being leashed (with infomration about the holder)
-- Therefore, an entity can be holder of multiple entities, BUT each entity can have only one holder
-
 # TODO
 - Feature: Mod Menu droop config
-- Go through modded behaviour to QA
