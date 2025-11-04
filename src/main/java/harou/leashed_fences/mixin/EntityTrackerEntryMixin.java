@@ -30,7 +30,7 @@ public class EntityTrackerEntryMixin {
     private Entity entity;
     
     /**
-     * When sending spawn packets to a new tracking player, also send custom connection data for LeashKnots.
+     * When sending packets to a new tracking player, also send custom connection data for LeashKnots.
      * We can't use the sender Consumer directly for CustomPayload, so we capture this in startTracking instead.
      */
     @Inject(method = "startTracking", at = @At("RETURN"))

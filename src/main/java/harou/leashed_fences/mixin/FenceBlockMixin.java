@@ -6,6 +6,7 @@ import harou.leashed_fences.util.KnotInteractionHelper;
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
+import net.minecraft.block.HorizontalConnectingBlock;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -25,7 +26,12 @@ import java.util.List;
  * while preserving vanilla mob-to-fence behavior.
  */
 @Mixin(FenceBlock.class)
-public class FenceBlockMixin {
+public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
+
+    public FenceBlockMixin(Settings settings) {
+		super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, settings);
+        LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin Constructor");
+	}
     
     @Inject(method = "onUse", at = @At("HEAD"), cancellable = true)
     private void onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit, CallbackInfoReturnable<ActionResult> cir) {
@@ -76,6 +82,7 @@ public class FenceBlockMixin {
     /**
      * Override onStateReplaced to immediately remove knots when the fence is broken.
      */
+    @Override
     protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
         LeashedFencesMod.LOGGER.info(">>> FenceBlockMixin: onStateReplaced");
         // Find any knot at this position
