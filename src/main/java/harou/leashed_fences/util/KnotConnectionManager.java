@@ -1,6 +1,8 @@
 package harou.leashed_fences.util;
 
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIntArray;
@@ -70,7 +72,6 @@ public class KnotConnectionManager {
     
     /**
      * Resolves UUIDs to actual entity instances in the world.
-     * Also validates connections and removes invalid ones (too far, entity gone, etc.)
      */
     public List<LeashKnotEntity> getConnectedKnots(LeashKnotEntity self) {
         List<LeashKnotEntity> connectedKnots = new ArrayList<>();
@@ -82,19 +83,11 @@ public class KnotConnectionManager {
             
             if (world instanceof ServerWorld serverWorld) {
                 // Server side: validate and clean up invalid connections
-                net.minecraft.entity.Entity entity = serverWorld.getEntity(uuid);
+                Entity entity = serverWorld.getEntity(uuid);
                 
                 if (entity instanceof LeashKnotEntity knot && !knot.isRemoved()) {
                     // Validate distance (max 10 blocks)
-                    double distance = self.squaredDistanceTo(knot);
-                    if (distance <= 100.0) { // 10 blocks squared
-                        connectedKnots.add(knot);
-                    } else {
-                        // Connection too far, remove it
-                        iterator.remove();
-                        // Also remove from the other side
-                        getManager(knot).connectedKnotUuids.remove(self.getUuid());
-                    }
+                    connectedKnots.add(knot);
                 } else {
                     // Entity doesn't exist or was removed, clean up
                     iterator.remove();
@@ -102,7 +95,7 @@ public class KnotConnectionManager {
             } else {
                 // Client side: just resolve without validation
                 // Iterate through loaded entities to find by UUID
-                for (net.minecraft.entity.Entity entity : world.getEntitiesByClass(
+                for (Entity entity : world.getEntitiesByClass(
                         LeashKnotEntity.class,
                         new net.minecraft.util.math.Box(
                             self.getX() - 50, self.getY() - 50, self.getZ() - 50,
@@ -156,13 +149,13 @@ public class KnotConnectionManager {
         if (world instanceof ServerWorld serverWorld) {
             // Remove this knot from all connected knots' lists
             for (UUID uuid : new ArrayList<>(connectedKnotUuids)) {
-                net.minecraft.entity.Entity entity = serverWorld.getEntity(uuid);
+                Entity entity = serverWorld.getEntity(uuid);
                 if (entity instanceof LeashKnotEntity knot) {
                     getManager(knot).connectedKnotUuids.remove(self.getUuid());
                     
                     // Check if the connected knot should be removed (no more connections)
-                    boolean hasVanillaConnections = !net.minecraft.entity.Leashable.collectLeashablesHeldBy(knot).isEmpty();
-                    boolean isBeingLeashed = knot instanceof net.minecraft.entity.Leashable leashable && 
+                    boolean hasVanillaConnections = !Leashable.collectLeashablesHeldBy(knot).isEmpty();
+                    boolean isBeingLeashed = knot instanceof Leashable leashable && 
                                             leashable.getLeashData() != null && 
                                             leashable.getLeashData().leashHolder != null;
                     boolean hasCustomConnections = getManager(knot).hasConnections();
