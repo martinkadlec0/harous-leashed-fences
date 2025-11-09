@@ -1,8 +1,10 @@
 package harou.leashed_fences;
 
+import harou.leashed_fences.network.EntityTrackingHandler;
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,9 @@ public class LeashedFencesMod implements ModInitializer {
 
 		// Register custom packet for syncing knot connections
 		PayloadTypeRegistry.playS2C().register(KnotConnectionSyncS2CPacket.ID, KnotConnectionSyncS2CPacket.CODEC);
+
+		// Register entity tracking event handler
+		EntityTrackingEvents.START_TRACKING.register(EntityTrackingHandler::onStartTracking);
 
 		LOGGER.info("Leashed Fences mod initialized! Fences can now be leashed together!");
 	}
