@@ -42,3 +42,4 @@ replay_*.log
 # custom
 third-party
 third-party/
+maven/

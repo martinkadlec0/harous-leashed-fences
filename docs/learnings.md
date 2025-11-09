@@ -7,3 +7,10 @@
     - Happens in Entity.interact
 # Does $ in mixin field names have special funcionality or is it just a wayto indicate?
     - https://wiki.fabricmc.net/tutorial:mixin_accessors
+# Maven vs Gradle
+    - Maven is used for repository management
+    - Gradle is used as build tool
+# Publications
+    - Artifact - Output file produced by build
+    - Publication - meta file (pom/sha) + artifacts (main jar, source jar, docs jar)
+    - Coordinates - group:artifact:version
