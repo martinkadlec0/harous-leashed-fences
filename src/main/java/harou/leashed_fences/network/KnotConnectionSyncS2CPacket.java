@@ -2,6 +2,7 @@ package harou.leashed_fences.network;
 
 import harou.leashed_fences.api.KnotConnectionAccess;
 import harou.leashed_fences.util.KnotConnectionManager;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.LeashKnotEntity;
@@ -49,7 +50,7 @@ public record KnotConnectionSyncS2CPacket(int knotEntityId, Set<UUID> connectedK
      * Sends connection data for a knot to all players tracking it
      */
     public static void sendToTracking(LeashKnotEntity knot) {
-        if (!(knot.getEntityWorld() instanceof ServerWorld serverWorld)) {
+        if (knot.getEntityWorld().isClient()) {
             return;
         }
         
@@ -62,14 +63,8 @@ public record KnotConnectionSyncS2CPacket(int knotEntityId, Set<UUID> connectedK
         
         KnotConnectionSyncS2CPacket packet = new KnotConnectionSyncS2CPacket(knot.getId(), connections);
         
-        // Send to all players tracking this entity using Fabric API
-        // Get all players in the server and check if they're tracking this entity
-        for (ServerPlayerEntity player : serverWorld.getServer().getPlayerManager().getPlayerList()) {
-            // Check if player is close enough to be tracking this entity (within render distance)
-            double distanceSquared = player.squaredDistanceTo(knot);
-            if (distanceSquared < 4096.0) { // 64 blocks squared (typical entity tracking range)
-                ServerPlayNetworking.send(player, packet);
-            }
+        for (ServerPlayerEntity player : PlayerLookup.tracking(knot)) {
+            ServerPlayNetworking.send(player, packet);
         }
     }
     
