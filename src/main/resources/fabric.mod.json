@@ -8,9 +8,9 @@
 		"BSHarou"
 	],
 	"contact": {
-		"homepage": "https://modrinth.com/mod/leashed-fences",
-		"sources": "https://github.com/martinkadlec0/leashed-fences",
-		"issues": "https://github.com/martinkadlec0/leashed-fences/issues"
+		"homepage": "https://modrinth.com/mod/harous-leashed-fences",
+		"sources": "https://github.com/martinkadlec0/harous-leashed-fences",
+		"issues": "https://github.com/martinkadlec0/harous-leashed-fences/issues"
 	},
 	"license": "MIT",
 	"icon": "assets/leashed-fences/icon.png",
