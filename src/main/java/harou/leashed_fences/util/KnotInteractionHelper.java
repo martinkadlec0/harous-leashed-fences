@@ -139,7 +139,7 @@ public class KnotInteractionHelper {
             // Play sounds and emit events
             KnotConnectionSyncS2CPacket.sendToTracking(targetKnot);
             return true;
-        } 
+        }
         
         return false;
     }

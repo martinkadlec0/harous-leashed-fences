@@ -4,6 +4,7 @@ import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIntArray;
 import net.minecraft.nbt.NbtList;
@@ -30,6 +31,32 @@ public class KnotConnectionManager {
     
     public KnotConnectionManager() {
         this.connectedKnotUuids = new HashSet<>();
+    }
+
+    public void checkDistance(LeashKnotEntity self) {
+        var knots = this.getConnectedKnots(self);
+        var snappedAny = false;
+
+        if (self instanceof Leashable leashableSelf) {
+            for (var knot : knots) {
+                if (knot instanceof Leashable leashableKnot) {
+                    double d = leashableSelf.getDistanceToCenter(knot);
+                    if (d > leashableKnot.getLeashSnappingDistance()) {
+                        snappedAny = true;
+                        removeConnection(self, knot);
+                        leashableKnot.onLeashRemoved();
+                        self.dropItem((ServerWorld) self.getEntityWorld(), Items.LEAD);
+                        
+                        if (!knot.isRemoved()) KnotConnectionSyncS2CPacket.sendToTracking(knot);
+                    }
+                }
+            }
+
+            if (snappedAny) {
+                if (!self.isRemoved()) KnotConnectionSyncS2CPacket.sendToTracking(self);
+                leashableSelf.onLeashRemoved();
+            }
+        }
     }
     
     /**
@@ -86,7 +113,6 @@ public class KnotConnectionManager {
                 Entity entity = serverWorld.getEntity(uuid);
                 
                 if (entity instanceof LeashKnotEntity knot && !knot.isRemoved()) {
-                    // Validate distance (max 10 blocks)
                     connectedKnots.add(knot);
                 } else {
                     // Entity doesn't exist or was removed, clean up
@@ -226,7 +252,7 @@ public class KnotConnectionManager {
     /**
      * Helper to get the connection manager from a LeashKnotEntity
      */
-    private static KnotConnectionManager getManager(LeashKnotEntity knot) {
+    public static KnotConnectionManager getManager(LeashKnotEntity knot) {
         if (knot instanceof harou.leashed_fences.api.KnotConnectionAccess access) {
             return access.leashedFences$getConnectionManager();
         }

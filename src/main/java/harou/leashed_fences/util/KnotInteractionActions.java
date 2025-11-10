@@ -4,6 +4,7 @@ import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
 import net.minecraft.entity.Leashable;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.world.event.GameEvent;
@@ -42,6 +43,8 @@ public class KnotInteractionActions {
             knot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
             if (playSound) knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
         }
+        
+        KnotConnectionManager.getManager(knot).checkDistance(knot);
         
         return ActionResult.SUCCESS_SERVER;
     }
