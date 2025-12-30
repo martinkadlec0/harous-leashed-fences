@@ -1,11 +1,14 @@
 package harou.leashed_fences.mixin.client;
 
-import harou.leashed_fences.api.LeashDataAccess;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.command.LeashCommandRenderer;
-import net.minecraft.client.render.entity.state.EntityRenderState.LeashData;
-import net.minecraft.util.math.MathHelper;
+import harou.leashed_fences.api.LeashStateAccess;
+
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.entity.state.EntityRenderState.LeashState;
+import net.minecraft.client.renderer.feature.LeashFeatureRenderer;
+import net.minecraft.util.Mth;
+
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -14,15 +17,15 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Mixin to add droop effect to lead rendering.
  * Uses @Overwrite as it's the most reliable solution for modifying this private static method.
  */
-@Mixin(LeashCommandRenderer.class)
-public class LeashCommandRendererMixin {
+@Mixin(LeashFeatureRenderer.class)
+public class LeashFeatureRendererMixin {
     
     /**
      * @author Harou
      * @reason Add extra slack effect to same Y knot-to-knot connections
      */
     @Overwrite
-    private static void render(
+    private static void addVertexPair(
 		VertexConsumer vertexConsumer,
 		Matrix4f matrix,
 		float offsetX,
@@ -33,12 +36,12 @@ public class LeashCommandRendererMixin {
 		float perpendicularOffset,
 		int segmentIndex,
 		boolean backside,
-		LeashData data
+		LeashState data
 	) {
 		float f = segmentIndex / 24.0F;
-		int i = (int)MathHelper.lerp(f, (float)data.leashedEntityBlockLight, (float)data.leashHolderBlockLight);
-		int j = (int)MathHelper.lerp(f, (float)data.leashedEntitySkyLight, (float)data.leashHolderSkyLight);
-		int k = LightmapTextureManager.pack(i, j);
+		int i = (int)Mth.lerp(f, (float)data.startBlockLight, (float)data.endBlockLight);
+		int j = (int)Mth.lerp(f, (float)data.startSkyLight, (float)data.endSkyLight);
+		int k = LightTexture.pack(i, j);
 		float g = segmentIndex % 2 == (backside ? 1 : 0) ? 0.7F : 1.0F;
 		float h = 0.5F * g;
 		float l = 0.4F * g;
@@ -52,7 +55,7 @@ public class LeashCommandRendererMixin {
 		}
 
         // Add extra slack effect based on horizontal distance (only for same Y knot-to-knot connections)
-        if (offsetY == 0.0F && data instanceof LeashDataAccess access && access.leashedFences$isKnotToKnot()) {
+        if (offsetY == 0.0F && data instanceof LeashStateAccess access && access.leashedFences$isKnotToKnot()) {
             float horizontalDistance = (float)Math.sqrt(offsetX * offsetX + offsetZ * offsetZ);
             float maxDroop = 0.15F;
             float distanceScale = 0.05F;
@@ -61,8 +64,8 @@ public class LeashCommandRendererMixin {
         }
 
 		float p = offsetZ * f;
-		vertexConsumer.vertex(matrix, n - sideOffset, o + yOffset, p + perpendicularOffset).color(h, l, m, 1.0F).light(k);
-		vertexConsumer.vertex(matrix, n + sideOffset, o + 0.05F - yOffset, p - perpendicularOffset).color(h, l, m, 1.0F).light(k);
+		vertexConsumer.addVertex(matrix, n - sideOffset, o + yOffset, p + perpendicularOffset).setColor(h, l, m, 1.0F).setLight(k);
+		vertexConsumer.addVertex(matrix, n + sideOffset, o + 0.05F - yOffset, p - perpendicularOffset).setColor(h, l, m, 1.0F).setLight(k);
 	}
 }
 

@@ -1,21 +1,21 @@
 package harou.leashed_fences.mixin;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.Leashable;
-import net.minecraft.entity.decoration.BlockAttachedEntity;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Leashable;
+import net.minecraft.world.entity.decoration.BlockAttachedEntity;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,10 +39,10 @@ import java.util.List;
  * Makes LeashKnotEntity implement Leashable interface for temporary player interactions,
  * and adds custom connection system for persistent knot-to-knot connections.
  */
-@Mixin(LeashKnotEntity.class)
-public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implements Leashable, KnotConnectionAccess {
+@Mixin(LeashFenceKnotEntity.class)
+public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity implements Leashable, KnotConnectionAccess {
 
-    public LeashKnotEntityMixin(EntityType<? extends LeashKnotEntity> entityType, World world) {
+    public LeashFenceKnotEntityMixin(EntityType<? extends LeashFenceKnotEntity> entityType, Level world) {
 		super(entityType, world);
 	}
     
@@ -59,23 +59,24 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
 
     @Override
     public void tick() {
+        // BlockAttachedEntity.tick -> checks every 100 ticks if the attached block still exists
         super.tick();
 
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
+        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
         
         // Handle vanilla leash distance checking (when this knot is being held by a player)
         // BlockAttachedEntity.tick() doesn't call super.tick(), so Entity.tick()'s leash logic never runs
         // We must manually call Leashable.tickLeash() here
-        if (self.getEntityWorld() instanceof ServerWorld serverWorld && this.isLeashed()) {
-            Leashable.tickLeash(serverWorld, (LeashKnotEntity & Leashable) (Object) self);
+        if (self.level() instanceof ServerLevel serverWorld && this.isLeashed()) {
+            Leashable.tickLeash(serverWorld, (LeashFenceKnotEntity & Leashable) (Object) self);
         }
         
         // Show which system(s) are active for this knot (debug display)
         if (LeashedFencesMod.SHOW_DEBUG_NAMES) {
             boolean heldByPlayer = leashData != null && leashData.leashHolder != null;
-            List<Leashable> vanillaHolding = Leashable.collectLeashablesHeldBy(self);
-            int vanillaMobCount = (int) vanillaHolding.stream().filter(l -> !(l instanceof LeashKnotEntity)).count();
-            int vanillaKnotCount = (int) vanillaHolding.stream().filter(l -> l instanceof LeashKnotEntity).count();
+            List<Leashable> vanillaHolding = Leashable.leashableLeashedTo(self);
+            int vanillaMobCount = (int) vanillaHolding.stream().filter(l -> !(l instanceof LeashFenceKnotEntity)).count();
+            int vanillaKnotCount = (int) vanillaHolding.stream().filter(l -> l instanceof LeashFenceKnotEntity).count();
             int customConnections = connectionManager.getConnectionCount();
             
             StringBuilder name = new StringBuilder();   
@@ -104,7 +105,7 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
                 name.append("Empty");
             }
             
-            self.setCustomName(Text.of(name.toString()));
+            self.setCustomName(Component.nullToEmpty(name.toString()));
             self.setCustomNameVisible(true);
         }
     }
@@ -112,13 +113,13 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     /**
      * Override to make LeashKnotEntity saveable.
      * Vanilla disables saving for knots, but we need them to persist fence-to-fence connections.
-     * The access widener makes this method overridable by removing the final modifier.
+     * An access widener makes this method overridable by removing the final modifier.
      */
     @Nullable
     @Override
-    protected String getSavedEntityId() {
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-        return EntityType.getId(self.getType()).toString();
+    protected String getEncodeId() {
+        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
+        return EntityType.getKey(self.getType()).toString();
     }
 
     @Override
@@ -132,26 +133,26 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     }
 
     @Override
-    public Vec3d getLeashOffset(float tickProgress) {
+    public Vec3 getLeashOffset(float tickProgress) {
         // When this knot is being leashed, attach the lead to the center of the knot
         // This matches the position used by getLeashPos() for consistency
-        return new Vec3d(0.0, 0.2, 0.0);
+        return new Vec3(0.0, 0.2, 0.0);
     }
 
     @Override
-    public Vec3d getLeashOffset() {
+    public Vec3 getLeashOffset() {
         // When this knot is being leashed, attach the lead to the center of the knot
-        return new Vec3d(0.0, 0.2, 0.0);
+        return new Vec3(0.0, 0.2, 0.0);
     }
 
     @Override
     public void onLeashRemoved() {
         // When this knot's leash is removed (it was being held by something), 
         // check if it should be discarded
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
+        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
         
         // If this knot has no other entities attached to it AND no custom connections, remove it
-        boolean hasVanillaConnections = !Leashable.collectLeashablesHeldBy(self).isEmpty();
+        boolean hasVanillaConnections = !Leashable.leashableLeashedTo(self).isEmpty();
         boolean hasCustomConnections = connectionManager.hasConnections();
         
         if (!hasVanillaConnections && !hasCustomConnections) {
@@ -160,19 +161,21 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     }
 
     /**
-     * Inject into canStayAttached to clean up custom connections before the knot is removed.
+     * Inject into "survives" (yarn: canStayAttached) to clean up custom connections before the knot is removed.
+     * 
+     * @see LeashFenceKnotEntity#survives
      */
-    @Inject(method = "canStayAttached", at = @At("HEAD"), cancellable = true)
-    private void onCanStayAttached(CallbackInfoReturnable<Boolean> cir) {
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
-        boolean fenceExists = self.getEntityWorld().getBlockState(self.getAttachedBlockPos()).isIn(BlockTags.FENCES);
+    @Inject(method = "survives", at = @At("HEAD"), cancellable = true)
+    private void onSurvives(CallbackInfoReturnable<Boolean> cir) {
+        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
+        boolean fenceExists = self.level().getBlockState(self.getPos()).is(BlockTags.FENCES);
         
         // If fence doesn't exist, clean up custom connections before removal
         if (!fenceExists && connectionManager.hasConnections()) {
-            connectionManager.clearAllConnections(self.getEntityWorld(), self);
+            connectionManager.clearAllConnections(self.level(), self);
             
             // Send update to clients
-            if (!self.getEntityWorld().isClient()) {
+            if (!self.level().isClientSide()) {
                 KnotConnectionSyncS2CPacket.sendToTracking(self);
             }
         }
@@ -182,19 +185,21 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     }
 
     /**
-     * Inject into onBreak to ensure custom connections are cleaned up when the knot is broken.
+     * Inject into "dropItem" (yarn: onBreak) to ensure custom connections are cleaned up when the knot is broken.
+     * 
+     * @see LeashFenceKnotEntity#dropItem
      */
-    @Inject(method = "onBreak", at = @At("HEAD"))
-    private void onBreakHead(ServerWorld world, Entity breaker, CallbackInfo ci) {
-        LeashKnotEntity self = (LeashKnotEntity)(Object)this;
+    @Inject(method = "dropItem", at = @At("HEAD"))
+    private void onDropItem(ServerLevel world, Entity breaker, CallbackInfo ci) {
+        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
         KnotInteractionHelper.discardCustomConnections(self, breaker);
     }
 
     /**
-     * Inject to save leash data and custom connections when the knot is saved to NBT.
+     * Inject into "addAdditionalSaveData" (yarn: writeCustomData) to save leash data and custom connections when the knot is saved to NBT.
      */
-    @Inject(method = "writeCustomData", at = @At("RETURN"))
-    private void onWriteCustomData(WriteView view, CallbackInfo ci) {
+    @Inject(method = "addAdditionalSaveData", at = @At("RETURN"))
+    private void onAddAdditionalSaveData(ValueOutput view, CallbackInfo ci) {
         // Save the leash data using the default Leashable implementation
         // (Only used for temporary player interactions)
         this.writeLeashData(view, this.leashData);
@@ -209,10 +214,10 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     }
 
     /**
-     * Inject to load leash data and custom connections when the knot is loaded from NBT.
+     * Inject into "readAdditionalSaveData" (yarn: readCustomData) to load leash data and custom connections when the knot is loaded from NBT.
      */
-    @Inject(method = "readCustomData", at = @At("RETURN"))
-    private void onReadCustomData(ReadView view, CallbackInfo ci) {
+    @Inject(method = "readAdditionalSaveData", at = @At("RETURN"))
+    private void onReadAdditionalSaveData(ValueInput view, CallbackInfo ci) {
         // Load the leash data using the default Leashable implementation
         this.readLeashData(view);
         
@@ -222,15 +227,15 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
 
 
     /**
-     * Inject into onHeldLeashUpdate to prevent knot removal when it's part of fence-to-fence connections.
+     * Inject into "notifyLeasheeRemoved" (yarn: onHeldLeashUpdate) to prevent knot removal when it's part of fence-to-fence connections.
      * This is called when an entity that this knot is holding gets unleashed.
      */
-    @Inject(method = "onHeldLeashUpdate", at = @At("HEAD"), cancellable = true)
-    private void onOnHeldLeashUpdate(Leashable heldLeashable, CallbackInfo ci) {
-        LeashKnotEntity knot = (LeashKnotEntity)(Object)this;
+    @Inject(method = "notifyLeasheeRemoved", at = @At("HEAD"), cancellable = true)
+    private void onNotifyLeasheeRemoved(Leashable heldLeashable, CallbackInfo ci) {
+        LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
         
         // Check if this knot still has entities held by it OR is being leashed to something OR has custom connections
-        boolean hasHeldEntities = !Leashable.collectLeashablesHeldBy(knot).isEmpty();
+        boolean hasHeldEntities = !Leashable.leashableLeashedTo(knot).isEmpty();
         boolean isBeingLeashed = this.isLeashed();
         boolean hasKnotToKnotConnections = connectionManager.hasConnections();
         
@@ -246,17 +251,19 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
     /**
      * Completely custom interaction logic for knot-to-knot connections.
      * Preserves vanilla behavior for mobs while adding fence-to-fence support.
+     * 
+     * @see LeashFenceKnotEntity#interact
      */
     @Inject(method = "interact", at = @At("HEAD"), cancellable = true)
-    private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        LeashKnotEntity knot = (LeashKnotEntity)(Object)this;
+    private void onInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
 
         // Only on server side
-        if (knot.getEntityWorld().isClient()) {
+        if (knot.level().isClientSide()) {
             return;
         }
 
-        if (player.getStackInHand(hand).isOf(Items.SHEARS)) {
+        if (player.getItemInHand(hand).is(Items.SHEARS)) {
             return;
         }
 
@@ -268,7 +275,7 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
         var playerHoldsThisKnot = KnotInteractionHelper.isHoldingEntity(held, knot);
 
         if (held.isEmpty()) {
-            if (heldByKnot.hasMobs && !player.shouldCancelInteraction()) {
+            if (heldByKnot.hasMobs && !player.isSecondaryUseActive()) {
                 cir.setReturnValue(KnotInteractionActions.passMobsFromKnotToPlayer(player, knot));
                 return;
             } else if (KnotInteractionHelper.hasLeadItem(player)) {
@@ -278,7 +285,7 @@ public abstract class LeashKnotEntityMixin extends BlockAttachedEntity implement
                 cir.setReturnValue(KnotInteractionActions.passKnotsFromKnotToPlayer(player, knot));
                 return;
             } else {
-                cir.setReturnValue(ActionResult.PASS);
+                cir.setReturnValue(InteractionResult.PASS);
                 return;
             }
         } else if (playerHoldsThisKnot) {            

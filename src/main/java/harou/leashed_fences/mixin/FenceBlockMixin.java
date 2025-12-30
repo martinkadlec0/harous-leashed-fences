@@ -3,16 +3,19 @@ package harou.leashed_fences.mixin;
 import harou.leashed_fences.util.KnotInteractionActions;
 import harou.leashed_fences.util.KnotInteractionHelper;
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FenceBlock;
-import net.minecraft.block.HorizontalConnectingBlock;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.CrossCollisionBlock;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,16 +28,21 @@ import java.util.List;
  * while preserving vanilla mob-to-fence behavior.
  */
 @Mixin(FenceBlock.class)
-public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
+public abstract class FenceBlockMixin extends CrossCollisionBlock {
 
-    public FenceBlockMixin(Settings settings) {
+    public FenceBlockMixin(Properties settings) {
 		super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, settings);
 	}
     
-    @Inject(method = "onUse", at = @At("HEAD"), cancellable = true)
-    private void onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit, CallbackInfoReturnable<ActionResult> cir) {
-        if (world.isClient()) {
-            cir.setReturnValue(ActionResult.SUCCESS);
+    /**
+     * Replace interactions with FenceBlock
+     * 
+     * @see FenceBlock#useWithoutItem
+     */
+    @Inject(method = "useWithoutItem", at = @At("HEAD"), cancellable = true)
+    private void onUseWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
+        if (world.isClientSide()) {
+            cir.setReturnValue(InteractionResult.SUCCESS);
             return;
         }
         
@@ -42,10 +50,10 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
         HeldEntities held = new HeldEntities(player);
         
         // Check if there's a knot at this position
-        List<LeashKnotEntity> leashKnotEntities = world.getEntitiesByClass(
-            LeashKnotEntity.class,
-            new net.minecraft.util.math.Box(pos),
-            e -> e.getAttachedBlockPos().equals(pos)
+        List<LeashFenceKnotEntity> leashKnotEntities = world.getEntitiesOfClass(
+            LeashFenceKnotEntity.class,
+            new net.minecraft.world.phys.AABB(pos),
+            e -> e.getPos().equals(pos)
         );
         var knot = !leashKnotEntities.isEmpty() ? leashKnotEntities.getFirst() : null;
         var newKnot = knot == null;
@@ -55,15 +63,15 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
         if (held.isEmpty()) {
             // No knot / helds mobs / helds knot -> PASS
             // Player picks up mobs only when interacting directly with a Knot
-            cir.setReturnValue(ActionResult.PASS);
+            cir.setReturnValue(InteractionResult.PASS);
             return;
         } else if (playerHoldsThisKnot) {            
             cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
             return;
         } else {
             if (knot == null) {
-                knot = LeashKnotEntity.getOrCreate(world, pos);
-                knot.onPlace();
+                knot = LeashFenceKnotEntity.getOrCreateKnot(world, pos);
+                knot.playPlacementSound();
             }
             var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, !newKnot);
             cir.setReturnValue(result);
@@ -73,22 +81,25 @@ public abstract class FenceBlockMixin extends HorizontalConnectingBlock {
     }
 
     /**
-     * Override onStateReplaced to immediately remove knots when the fence is broken.
+     * BlockAttachedEntity.tick checks every 100 ticks if the block still exists, resulting in the knot floating in the air for up to 10s.
+     * This code should remove the knot instantly instead.
+     * 
+     * @see BlockBehaviour#affectNeighborsAfterRemoval
      */
     @Override
-    protected void onStateReplaced(BlockState state, ServerWorld world, BlockPos pos, boolean moved) {
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
         // Find any knot at this position
-        List<LeashKnotEntity> knots = world.getEntitiesByClass(
-            LeashKnotEntity.class,
-            new net.minecraft.util.math.Box(pos),
-            knot -> knot.getAttachedBlockPos().equals(pos)
+        List<LeashFenceKnotEntity> knots = world.getEntitiesOfClass(
+            LeashFenceKnotEntity.class,
+            new net.minecraft.world.phys.AABB(pos),
+            knot -> knot.getPos().equals(pos)
         );
         
         // This should be always just one knot (or none) as there can't be multiple knots at the same position
-        for (LeashKnotEntity knot : knots) {
+        for (LeashFenceKnotEntity knot : knots) {
             // Clean up custom connections
             knot.discard();
-            knot.onBreak(world, null);
+            knot.dropItem(world, null);
         }
     }
 }

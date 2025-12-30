@@ -1,35 +1,34 @@
 package harou.leashed_fences.util;
 
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
-import net.minecraft.entity.Leashable;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.ActionResult;
-import net.minecraft.world.event.GameEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Leashable;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 public class KnotInteractionActions {
-    public static ActionResult connectKnotToPlayer(PlayerEntity player, LeashKnotEntity knot) {
-        double distance = player.squaredDistanceTo(knot);
+    public static InteractionResult connectKnotToPlayer(Player player, LeashFenceKnotEntity knot) {
+        double distance = player.distanceToSqr(knot);
         if (distance <= 100.0) { // 10 blocks squared (same as vanilla)
             KnotInteractionHelper.consumeLead(player);
-            ((Leashable)knot).attachLeash(player, true);
-            knot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
-            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
-            return ActionResult.SUCCESS;
+            ((Leashable)knot).setLeashedTo(player, true);
+            knot.gameEvent(GameEvent.BLOCK_ATTACH, player);
+            knot.playSound(SoundEvents.LEAD_TIED);
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public static ActionResult dropKnotToPlayerConnection(PlayerEntity player, LeashKnotEntity knot) {
-        ((Leashable)knot).detachLeash();
-        knot.emitGameEvent(GameEvent.BLOCK_DETACH, player);
-        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
-        return ActionResult.SUCCESS_SERVER;
+    public static InteractionResult dropKnotToPlayerConnection(Player player, LeashFenceKnotEntity knot) {
+        ((Leashable)knot).dropLeash();
+        knot.gameEvent(GameEvent.BLOCK_DETACH, player);
+        knot.playSound(SoundEvents.LEAD_UNTIED);
+        return InteractionResult.SUCCESS_SERVER;
     }
 
-    public static ActionResult passLeadsFromPlayerToKnot(PlayerEntity player, LeashKnotEntity knot, boolean playSound) {
+    public static InteractionResult passLeadsFromPlayerToKnot(Player player, LeashFenceKnotEntity knot, boolean playSound) {
         HeldEntities held = new HeldEntities(player);
 
         boolean newCustomConnection = KnotInteractionHelper.createCustomConnections(
@@ -40,36 +39,36 @@ public class KnotInteractionActions {
         );
 
         if (newVanillaConnection || newCustomConnection) {
-            knot.emitGameEvent(GameEvent.BLOCK_ATTACH, player);
-            if (playSound) knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_TIED);
+            knot.gameEvent(GameEvent.BLOCK_ATTACH, player);
+            if (playSound) knot.playSound(SoundEvents.LEAD_TIED);
         }
         
         KnotConnectionManager.getManager(knot).checkDistance(knot);
         
-        return ActionResult.SUCCESS_SERVER;
+        return InteractionResult.SUCCESS_SERVER;
     }
 
-    public static ActionResult passMobsFromKnotToPlayer(PlayerEntity player, LeashKnotEntity knot) {
+    public static InteractionResult passMobsFromKnotToPlayer(Player player, LeashFenceKnotEntity knot) {
         HeldEntities held = new HeldEntities(knot);
 
         for (Leashable leashable : held.mobs) {
-            if (leashable.canBeLeashedTo(player)) {
-                leashable.attachLeash(player, true);
+            if (leashable.canHaveALeashAttachedTo(player)) {
+                leashable.setLeashedTo(player, true);
             }
         }
 
-        knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
-        return ActionResult.SUCCESS_SERVER;
+        knot.playSound(SoundEvents.LEAD_UNTIED);
+        return InteractionResult.SUCCESS_SERVER;
     }
 
-    public static ActionResult passKnotsFromKnotToPlayer(PlayerEntity player, LeashKnotEntity knot) {
-        if (!player.isSneaking()) {
+    public static InteractionResult passKnotsFromKnotToPlayer(Player player, LeashFenceKnotEntity knot) {
+        if (!player.isShiftKeyDown()) {
             KnotInteractionHelper.pickupCustomConnections(knot, player);
-            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
+            knot.playSound(SoundEvents.LEAD_UNTIED);
         } else {
             KnotInteractionHelper.discardCustomConnections(knot, player);
-            knot.playSoundIfNotSilent(SoundEvents.ITEM_LEAD_UNTIED);
+            knot.playSound(SoundEvents.LEAD_UNTIED);
         }
-        return ActionResult.SUCCESS_SERVER;
+        return InteractionResult.SUCCESS_SERVER;
     }
 }

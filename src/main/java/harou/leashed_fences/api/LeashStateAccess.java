@@ -4,7 +4,7 @@ package harou.leashed_fences.api;
  * Accessor interface to add custom fields to LeashData.
  * This allows us to mark knot-to-knot connections for special rendering.
  */
-public interface LeashDataAccess {
+public interface LeashStateAccess {
     /**
      * Returns whether this LeashData represents a knot-to-knot connection.
      * @return true if this is a custom knot-to-knot connection, false otherwise

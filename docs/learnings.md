@@ -5,7 +5,7 @@
     - Return is called for every return in the function
 # Add existing lead connection to a mob
     - Happens in Entity.interact
-# Does $ in mixin field names have special funcionality or is it just a wayto indicate?
+# Does $ in mixin field names have special funcionality or is it just a way to indicate?
     - https://wiki.fabricmc.net/tutorial:mixin_accessors
 # Maven vs Gradle
     - Maven is used for repository management

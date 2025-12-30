@@ -1,18 +1,20 @@
 package harou.leashed_fences.mixin.client;
 
 import harou.leashed_fences.api.KnotConnectionAccess;
-import harou.leashed_fences.api.LeashDataAccess;
+import harou.leashed_fences.api.LeashStateAccess;
 import harou.leashed_fences.util.KnotConnectionManager;
-import net.minecraft.client.render.Frustum;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.LightType;
-import net.minecraft.world.World;
+
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,17 +33,22 @@ import java.util.List;
 public abstract class EntityRendererMixin<T extends Entity, S extends EntityRenderState> {
     
     @Shadow
-    protected abstract int getBlockLight(T entity, BlockPos pos);
+    protected abstract int getBlockLightLevel(T entity, BlockPos pos);
     
     @Shadow
-    protected abstract Box getBoundingBox(T entity);
+    protected abstract AABB getBoundingBoxForCulling(T entity);
     
     /**
      * Prevent culling of knots that have custom connections to visible knots.
      * This mimics vanilla's behavior for Leashable entities (lines 87-93 in EntityRenderer).
+     * 
+     * @see EntityRenderer#shouldRender
      */
-    @Inject(method = "shouldRender(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/render/Frustum;DDD)Z",
-            at = @At("RETURN"), cancellable = true)
+    @Inject(
+        method = "shouldRender(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/culling/Frustum;DDD)Z",
+        at = @At("RETURN"),
+        cancellable = true
+    )
     private void preventCustomConnectionCulling(T entity, Frustum frustum, 
             double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
         // If already being rendered, don't need to check
@@ -50,7 +57,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
         }
         
         // Only handle LeashKnotEntities with custom connections
-        if (!(entity instanceof LeashKnotEntity knot)) {
+        if (!(entity instanceof LeashFenceKnotEntity knot)) {
             return;
         }
         
@@ -60,17 +67,17 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
         
         // Check if any custom connected knots are visible
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
+        List<LeashFenceKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
         
         if (!connectedKnots.isEmpty()) {
-            Box thisBox = this.getBoundingBox(entity);
+            AABB thisBox = this.getBoundingBoxForCulling(entity);
             
             // Check if any connected knot is visible (similar to vanilla Leashable check)
-            for (LeashKnotEntity connectedKnot : connectedKnots) {
-                Box connectedBox = connectedKnot.getBoundingBox();
+            for (LeashFenceKnotEntity connectedKnot : connectedKnots) {
+                AABB connectedBox = connectedKnot.getBoundingBox();
                 
                 // If the connected knot or the union of boxes is visible, render this knot
-                if (frustum.isVisible(connectedBox) || frustum.isVisible(thisBox.union(connectedBox))) {
+                if (frustum.isVisible(connectedBox) || frustum.isVisible(thisBox.minmax(connectedBox))) {
                     cir.setReturnValue(true);
                     return;
                 }
@@ -81,13 +88,19 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     /**
      * After vanilla leash rendering is set up, add custom knot-to-knot connections.
      * Injects right after the vanilla leash logic (after line 254 where leashDatas is potentially set to null).
+     * 
+     * @see EntityRenderer#extractRenderState
      */
-    @Inject(method = "updateRenderState(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/render/entity/state/EntityRenderState;F)V", 
-            at = @At(value = "INVOKE", 
-                     target = "Lnet/minecraft/entity/Entity;doesRenderOnFire()Z"))
+    @Inject(
+        method = "extractRenderState(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;F)V", 
+        at = @At(
+            value = "INVOKE", 
+            target = "Lnet/minecraft/world/entity/Entity;displayFireAnimation()Z"
+        )
+    )
     private void addCustomKnotConnections(T entity, S state, float tickProgress, CallbackInfo ci) {
         // Only handle LeashKnotEntities with custom connections
-        if (!(entity instanceof LeashKnotEntity knot)) {
+        if (!(entity instanceof LeashFenceKnotEntity knot)) {
             return;
         }
         
@@ -97,70 +110,70 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
         
         // Get custom connections
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
+        List<LeashFenceKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
         
         if (connectedKnots.isEmpty()) {
             return; // No custom connections
         }
         
         // Calculate positions and lighting
-        Vec3d knotPos = knot.getLerpedPos(tickProgress);
-        Vec3d knotOffset = new Vec3d(0.0, 0.2, 0.0); // Knot attachment point
-        BlockPos knotBlockPos = BlockPos.ofFloored(knot.getCameraPosVec(tickProgress));
-        World world = knot.getEntityWorld();
+        Vec3 knotPos = knot.getPosition(tickProgress);
+        Vec3 knotOffset = new Vec3(0.0, 0.2, 0.0); // Knot attachment point
+        BlockPos knotBlockPos = BlockPos.containing(knot.getEyePosition(tickProgress));
+        Level world = knot.level();
         
-        int knotBlockLight = this.getBlockLight((T)knot, knotBlockPos);
-        int knotSkyLight = world.getLightLevel(LightType.SKY, knotBlockPos);
+        int knotBlockLight = this.getBlockLightLevel((T)knot, knotBlockPos);
+        int knotSkyLight = world.getBrightness(LightLayer.SKY, knotBlockPos);
         
         // If vanilla leash already exists, we need to add to it
         // Otherwise create new list
-        int vanillaLeashCount = (state.leashDatas != null) ? state.leashDatas.size() : 0;
+        int vanillaLeashCount = (state.leashStates != null) ? state.leashStates.size() : 0;
         int totalLeashCount = vanillaLeashCount + connectedKnots.size();
         
-        List<EntityRenderState.LeashData> newLeashDatas = new ArrayList<>(totalLeashCount);
+        List<EntityRenderState.LeashState> newLeashDatas = new ArrayList<>(totalLeashCount);
         
         // Preserve existing vanilla leash data (if any)
-        if (state.leashDatas != null) {
-            newLeashDatas.addAll(state.leashDatas);
+        if (state.leashStates != null) {
+            newLeashDatas.addAll(state.leashStates);
         }
         
         
-        var knotUuid = knot.getUuid();
+        var knotUuid = knot.getUUID();
         
         // Add custom connections
-        for (LeashKnotEntity connectedKnot : connectedKnots) {
+        for (LeashFenceKnotEntity connectedKnot : connectedKnots) {
             // Skip if this knot's UUID is greater than the connected knot's UUID
             // This ensures we only render the connection once (from the knot with smaller UUID)
-            if (knotUuid.compareTo(connectedKnot.getUuid()) > 0) {
+            if (knotUuid.compareTo(connectedKnot.getUUID()) > 0) {
                 continue;
             }
             
             // Calculate connected knot position and lighting
-            Vec3d connectedKnotPos = connectedKnot.getLerpedPos(tickProgress);
-            Vec3d connectedKnotOffset = new Vec3d(0.0, 0.2, 0.0);
-            BlockPos connectedKnotBlockPos = BlockPos.ofFloored(connectedKnot.getCameraPosVec(tickProgress));
+            Vec3 connectedKnotPos = connectedKnot.getPosition(tickProgress);
+            Vec3 connectedKnotOffset = new Vec3(0.0, 0.2, 0.0);
+            BlockPos connectedKnotBlockPos = BlockPos.containing(connectedKnot.getEyePosition(tickProgress));
             
-            int connectedKnotBlockLight = this.getBlockLight((T)connectedKnot, connectedKnotBlockPos);
-            int connectedKnotSkyLight = world.getLightLevel(LightType.SKY, connectedKnotBlockPos);
+            int connectedKnotBlockLight = this.getBlockLightLevel((T)connectedKnot, connectedKnotBlockPos);
+            int connectedKnotSkyLight = world.getBrightness(LightLayer.SKY, connectedKnotBlockPos);
             
             // Create LeashData for this connection
-            EntityRenderState.LeashData leashData = new EntityRenderState.LeashData();
+            EntityRenderState.LeashState leashData = new EntityRenderState.LeashState();
             leashData.offset = knotOffset;
-            leashData.startPos = knotPos.add(knotOffset);
-            leashData.endPos = connectedKnotPos.add(connectedKnotOffset);
-            leashData.leashedEntityBlockLight = knotBlockLight;
-            leashData.leashHolderBlockLight = connectedKnotBlockLight;
-            leashData.leashedEntitySkyLight = knotSkyLight;
-            leashData.leashHolderSkyLight = connectedKnotSkyLight;
+            leashData.start = knotPos.add(knotOffset);
+            leashData.end = connectedKnotPos.add(connectedKnotOffset);
+            leashData.startBlockLight = knotBlockLight;
+            leashData.endBlockLight = connectedKnotBlockLight;
+            leashData.startSkyLight = knotSkyLight;
+            leashData.endSkyLight = connectedKnotSkyLight;
             leashData.slack = true; // Knots are stationary, can have some slack
 
-            ((LeashDataAccess)leashData).leashedFences$setIsKnotToKnot(true);
+            ((LeashStateAccess)leashData).leashedFences$setIsKnotToKnot(true);
             
             newLeashDatas.add(leashData);
         }
         
         // Update the state with all leash data (vanilla + custom)
-        state.leashDatas = newLeashDatas.isEmpty() ? null : newLeashDatas;
+        state.leashStates = newLeashDatas.isEmpty() ? null : newLeashDatas;
     }
 }
 

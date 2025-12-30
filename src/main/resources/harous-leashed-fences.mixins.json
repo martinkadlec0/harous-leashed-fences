@@ -5,13 +5,13 @@
 	"mixins": [
 		"EntityMixin",
 		"FenceBlockMixin",
-		"LeashKnotEntityMixin",
+		"LeashFenceKnotEntityMixin",
 		"LeadItemMixin"
 	],
 	"client": [
 		"client.EntityRendererMixin",
-		"client.LeashCommandRendererMixin",
-		"client.LeashDataMixin"
+		"client.LeashFeatureRendererMixin",
+		"client.LeashStateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

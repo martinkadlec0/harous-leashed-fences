@@ -3,49 +3,52 @@ package harou.leashed_fences.mixin;
 import harou.leashed_fences.util.KnotInteractionActions;
 import harou.leashed_fences.util.KnotInteractionHelper;
 import harou.leashed_fences.util.KnotInteractionHelper.HeldEntities;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.LeadItem;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 
-import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.LeadItem;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.List;
+
 /**
  * Modifies LeadItem to support creating knot-to-knot connections when clicking on fence blocks.
- * Most of the interaction logic is in LeashKnotEntityMixin.
+ * Most of the interaction logic is in LeashFenceKnotEntityMixin.
  */
 @Mixin(LeadItem.class)
 public class LeadItemMixin {
 
     /**
-     * Handles clicking on fence blocks (not the knot entity itself) with a lead.
-     * This creates or picks up connections when clicking on the fence block directly.
+     * Injects into useOn (yarn: useOnBlock) to replace interactions.
+     * Handles clicking on fence blocks (NOT the knot entity itself) with a lead.
+     * 
+     * @see LeadItem#useOn
      */
-    @Inject(method = "useOnBlock", at = @At("HEAD"), cancellable = true)
-    private void onUseOnBlock(ItemUsageContext context, CallbackInfoReturnable<ActionResult> cir) {
-        PlayerEntity player = context.getPlayer();
-        World world = context.getWorld();
-        BlockPos pos = context.getBlockPos();
+    @Inject(method = "useOn", at = @At("HEAD"), cancellable = true)
+    private void onUseOn(UseOnContext context, CallbackInfoReturnable<InteractionResult> cir) {
+        Player player = context.getPlayer();
+        Level world = context.getLevel();
+        BlockPos pos = context.getClickedPos();
         BlockState blockState = world.getBlockState(pos);
 
         // Only handle fences
-        if (!blockState.isIn(BlockTags.FENCES)) {
+        if (!blockState.is(BlockTags.FENCES)) {
             return;
         }
 
         // Only server side
-        if (world.isClient() || player == null) {
-            cir.setReturnValue(ActionResult.SUCCESS);
+        if (world.isClientSide() || player == null) {
+            cir.setReturnValue(InteractionResult.SUCCESS);
             return;
         }
         
@@ -53,10 +56,10 @@ public class LeadItemMixin {
         HeldEntities held = new HeldEntities(player);
 
         // Check if there's a knot at this position
-        List<LeashKnotEntity> leashKnotEntities = world.getEntitiesByClass(
-            LeashKnotEntity.class,
-            new net.minecraft.util.math.Box(pos),
-            e -> e.getAttachedBlockPos().equals(pos)
+        List<LeashFenceKnotEntity> leashKnotEntities = world.getEntitiesOfClass(
+            LeashFenceKnotEntity.class,
+            new net.minecraft.world.phys.AABB(pos),
+            e -> e.getPos().equals(pos)
         );
         var knot = !leashKnotEntities.isEmpty() ? leashKnotEntities.getFirst() : null;
         // var heldByKnot = knot != null ? new HeldEntities(knot) : null;
@@ -64,8 +67,8 @@ public class LeadItemMixin {
 
         if (held.isEmpty()) {
             if (knot == null) {
-                knot = LeashKnotEntity.getOrCreate(world, pos);
-                knot.onPlace();
+                knot = LeashFenceKnotEntity.getOrCreateKnot(world, pos);
+                knot.playPlacementSound();
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
                 return;
             } else { 
@@ -74,9 +77,9 @@ public class LeadItemMixin {
             }
         } else {
             if (knot == null) {
-                knot = LeashKnotEntity.getOrCreate(world, pos);
-                knot.onPlace();
-                var result = player.isSneaking()
+                knot = LeashFenceKnotEntity.getOrCreateKnot(world, pos);
+                knot.playPlacementSound();
+                var result = player.isShiftKeyDown()
                     ? KnotInteractionActions.connectKnotToPlayer(player, knot)
                     : KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, false);
                 cir.setReturnValue(result);
@@ -85,7 +88,7 @@ public class LeadItemMixin {
                 cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
                 return;
             } else {
-                var result = player.isSneaking()
+                var result = player.isShiftKeyDown()
                     ? KnotInteractionActions.connectKnotToPlayer(player, knot)
                     : KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, true);
                 cir.setReturnValue(result);

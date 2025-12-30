@@ -1,20 +1,19 @@
 package harou.leashed_fences.util;
 
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.Leashable;
-import net.minecraft.entity.decoration.LeashKnotEntity;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtIntArray;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.Uuids;
-import net.minecraft.world.World;
-
 import java.util.*;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Leashable;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 /**
  * Manages bidirectional connections between LeashKnotEntities.
@@ -33,19 +32,19 @@ public class KnotConnectionManager {
         this.connectedKnotUuids = new HashSet<>();
     }
 
-    public void checkDistance(LeashKnotEntity self) {
+    public void checkDistance(LeashFenceKnotEntity self) {
         var knots = this.getConnectedKnots(self);
         var snappedAny = false;
 
         if (self instanceof Leashable leashableSelf) {
             for (var knot : knots) {
                 if (knot instanceof Leashable leashableKnot) {
-                    double d = leashableSelf.getDistanceToCenter(knot);
-                    if (d > leashableKnot.getLeashSnappingDistance()) {
+                    double d = leashableSelf.leashDistanceTo(knot);
+                    if (d > leashableKnot.leashSnapDistance()) {
                         snappedAny = true;
                         removeConnection(self, knot);
                         leashableKnot.onLeashRemoved();
-                        self.dropItem((ServerWorld) self.getEntityWorld(), Items.LEAD);
+                        self.spawnAtLocation((ServerLevel) self.level(), Items.LEAD);
                         
                         if (!knot.isRemoved()) KnotConnectionSyncS2CPacket.sendToTracking(knot);
                     }
@@ -64,7 +63,7 @@ public class KnotConnectionManager {
      * Updates both knots' connection lists.
      * @return true if connection was newly created (false if already existed)
      */
-    public static boolean createConnection(LeashKnotEntity knotA, LeashKnotEntity knotB) {
+    public static boolean createConnection(LeashFenceKnotEntity knotA, LeashFenceKnotEntity knotB) {
         if (knotA == knotB) {
             return false;
         }
@@ -72,8 +71,8 @@ public class KnotConnectionManager {
         KnotConnectionManager managerA = getManager(knotA);
         KnotConnectionManager managerB = getManager(knotB);
         
-        boolean addedA = managerA.connectedKnotUuids.add(knotB.getUuid());
-        boolean addedB = managerB.connectedKnotUuids.add(knotA.getUuid());
+        boolean addedA = managerA.connectedKnotUuids.add(knotB.getUUID());
+        boolean addedB = managerB.connectedKnotUuids.add(knotA.getUUID());
         
         return addedA || addedB;
     }
@@ -83,7 +82,7 @@ public class KnotConnectionManager {
      * Updates both knots' connection lists.
      * @return true if connection was removed (false if didn't exist)
      */
-    public static boolean removeConnection(LeashKnotEntity knotA, LeashKnotEntity knotB) {
+    public static boolean removeConnection(LeashFenceKnotEntity knotA, LeashFenceKnotEntity knotB) {
         if (knotA == knotB) {
             return false;
         }
@@ -91,8 +90,8 @@ public class KnotConnectionManager {
         KnotConnectionManager managerA = getManager(knotA);
         KnotConnectionManager managerB = getManager(knotB);
         
-        boolean removedA = managerA.connectedKnotUuids.remove(knotB.getUuid());
-        boolean removedB = managerB.connectedKnotUuids.remove(knotA.getUuid());
+        boolean removedA = managerA.connectedKnotUuids.remove(knotB.getUUID());
+        boolean removedB = managerB.connectedKnotUuids.remove(knotA.getUUID());
         
         return removedA || removedB;
     }
@@ -100,19 +99,19 @@ public class KnotConnectionManager {
     /**
      * Resolves UUIDs to actual entity instances in the world.
      */
-    public List<LeashKnotEntity> getConnectedKnots(LeashKnotEntity self) {
-        List<LeashKnotEntity> connectedKnots = new ArrayList<>();
+    public List<LeashFenceKnotEntity> getConnectedKnots(LeashFenceKnotEntity self) {
+        List<LeashFenceKnotEntity> connectedKnots = new ArrayList<>();
         Iterator<UUID> iterator = connectedKnotUuids.iterator();
-        World world = self.getEntityWorld();
+        Level world = self.level();
         
         while (iterator.hasNext()) {
             UUID uuid = iterator.next();
             
-            if (world instanceof ServerWorld serverWorld) {
+            if (world instanceof ServerLevel serverWorld) {
                 // Server side: validate and clean up invalid connections
                 Entity entity = serverWorld.getEntity(uuid);
                 
-                if (entity instanceof LeashKnotEntity knot && !knot.isRemoved()) {
+                if (entity instanceof LeashFenceKnotEntity knot && !knot.isRemoved()) {
                     connectedKnots.add(knot);
                 } else {
                     // Entity doesn't exist or was removed, clean up
@@ -121,14 +120,14 @@ public class KnotConnectionManager {
             } else {
                 // Client side: just resolve without validation
                 // Iterate through loaded entities to find by UUID
-                for (Entity entity : world.getEntitiesByClass(
-                        LeashKnotEntity.class,
-                        new net.minecraft.util.math.Box(
+                for (Entity entity : world.getEntitiesOfClass(
+                        LeashFenceKnotEntity.class,
+                        new net.minecraft.world.phys.AABB(
                             self.getX() - 50, self.getY() - 50, self.getZ() - 50,
                             self.getX() + 50, self.getY() + 50, self.getZ() + 50
                         ),
-                        e -> e.getUuid().equals(uuid))) {
-                    if (entity instanceof LeashKnotEntity knot) {
+                        e -> e.getUUID().equals(uuid))) {
+                    if (entity instanceof LeashFenceKnotEntity knot) {
                         connectedKnots.add(knot);
                         break;
                     }
@@ -171,16 +170,16 @@ public class KnotConnectionManager {
     /**
      * Removes all connections (called when knot is removed)
      */
-    public void clearAllConnections(World world, LeashKnotEntity self) {
-        if (world instanceof ServerWorld serverWorld) {
+    public void clearAllConnections(Level world, LeashFenceKnotEntity self) {
+        if (world instanceof ServerLevel serverWorld) {
             // Remove this knot from all connected knots' lists
             for (UUID uuid : new ArrayList<>(connectedKnotUuids)) {
                 Entity entity = serverWorld.getEntity(uuid);
-                if (entity instanceof LeashKnotEntity knot) {
-                    getManager(knot).connectedKnotUuids.remove(self.getUuid());
+                if (entity instanceof LeashFenceKnotEntity knot) {
+                    getManager(knot).connectedKnotUuids.remove(self.getUUID());
                     
                     // Check if the connected knot should be removed (no more connections)
-                    boolean hasVanillaConnections = !Leashable.collectLeashablesHeldBy(knot).isEmpty();
+                    boolean hasVanillaConnections = !Leashable.leashableLeashedTo(knot).isEmpty();
                     boolean isBeingLeashed = knot instanceof Leashable leashable && 
                                             leashable.getLeashData() != null && 
                                             leashable.getLeashData().leashHolder != null;
@@ -203,29 +202,29 @@ public class KnotConnectionManager {
     /**
      * Writes connections to WriteView using codec
      */
-    public void writeToView(WriteView view) {
+    public void writeToView(ValueOutput view) {
         if (!connectedKnotUuids.isEmpty()) {
-            view.put(CONNECTIONS_NBT_KEY, Uuids.SET_CODEC, connectedKnotUuids);
+            view.store(CONNECTIONS_NBT_KEY, UUIDUtil.CODEC_SET, connectedKnotUuids);
         }
     }
     
     /**
      * Reads connections from ReadView using codec
      */
-    public void readFromView(ReadView view) {
+    public void readFromView(ValueInput view) {
         connectedKnotUuids.clear();
-        view.read(CONNECTIONS_NBT_KEY, Uuids.SET_CODEC).ifPresent(connectedKnotUuids::addAll);
+        view.read(CONNECTIONS_NBT_KEY, UUIDUtil.CODEC_SET).ifPresent(connectedKnotUuids::addAll);
     }
     
     /**
      * Writes connections to NBT (for backward compatibility or direct NBT access)
      */
-    public void writeToNbt(NbtCompound nbt) {
+    public void writeToNbt(CompoundTag nbt) {
         if (!connectedKnotUuids.isEmpty()) {
-            NbtList list = new NbtList();
+            ListTag list = new ListTag();
             for (UUID uuid : connectedKnotUuids) {
-                int[] intArray = Uuids.toIntArray(uuid);
-                list.add(new NbtIntArray(intArray));
+                int[] intArray = UUIDUtil.uuidToIntArray(uuid);
+                list.add(new IntArrayTag(intArray));
             }
             nbt.put(CONNECTIONS_NBT_KEY, list);
         }
@@ -234,15 +233,15 @@ public class KnotConnectionManager {
     /**
      * Reads connections from NBT (for backward compatibility or direct NBT access)
      */
-    public void readFromNbt(NbtCompound nbt) {
+    public void readFromNbt(CompoundTag nbt) {
         connectedKnotUuids.clear();
-        Optional<NbtList> optList = nbt.getList(CONNECTIONS_NBT_KEY);
+        Optional<ListTag> optList = nbt.getList(CONNECTIONS_NBT_KEY);
         if (optList.isPresent()) {
-            NbtList list = optList.get();
+            ListTag list = optList.get();
             for (int i = 0; i < list.size(); i++) {
                 Optional<int[]> optArray = list.getIntArray(i);
                 if (optArray.isPresent()) {
-                    UUID uuid = Uuids.toUuid(optArray.get());
+                    UUID uuid = UUIDUtil.uuidFromIntArray(optArray.get());
                     connectedKnotUuids.add(uuid);
                 }
             }
@@ -252,7 +251,7 @@ public class KnotConnectionManager {
     /**
      * Helper to get the connection manager from a LeashKnotEntity
      */
-    public static KnotConnectionManager getManager(LeashKnotEntity knot) {
+    public static KnotConnectionManager getManager(LeashFenceKnotEntity knot) {
         if (knot instanceof harou.leashed_fences.api.KnotConnectionAccess access) {
             return access.leashedFences$getConnectionManager();
         }
