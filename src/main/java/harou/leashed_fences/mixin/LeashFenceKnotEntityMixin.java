@@ -2,10 +2,8 @@ package harou.leashed_fences.mixin;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.decoration.BlockAttachedEntity;
@@ -27,7 +25,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.api.KnotConnectionAccess;
-import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import harou.leashed_fences.util.KnotConnectionManager;
 import harou.leashed_fences.util.KnotInteractionActions;
 import harou.leashed_fences.util.KnotInteractionHelper;
@@ -155,56 +152,6 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
         return new Vec3(0.0, 0.2, 0.0);
     }
 
-    // @Override
-    // public void onLeashRemoved() {
-    //     // When this knot's leash is removed (it was being held by something), 
-    //     // check if it should be discarded
-    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
-        
-    //     // If this knot has no other entities attached to it AND no custom connections, remove it
-    //     boolean hasVanillaConnections = !Leashable.leashableLeashedTo(self).isEmpty();
-    //     boolean hasCustomConnections = connectionManager.hasConnections();
-        
-    //     if (!hasVanillaConnections && !hasCustomConnections) {
-    //         self.discard();
-    //     }
-    // }
-
-    /**
-     * Inject into "survives" (yarn: canStayAttached) to clean up custom connections before the knot is removed.
-     * 
-     * @see LeashFenceKnotEntity#survives
-     */
-    // @Inject(method = "survives", at = @At("HEAD"), cancellable = true)
-    // private void onSurvives(CallbackInfoReturnable<Boolean> cir) {
-    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
-    //     boolean fenceExists = self.level().getBlockState(self.getPos()).is(BlockTags.FENCES);
-        
-    //     // If fence doesn't exist, clean up custom connections before removal
-    //     if (!fenceExists && connectionManager.hasConnections()) {
-    //         connectionManager.clearAllConnections(self, true);
-            
-    //         // Send update to clients
-    //         if (!self.level().isClientSide()) {
-    //             KnotConnectionSyncS2CPacket.sendToTracking(self);
-    //         }
-    //     }
-        
-    //     // Set the return value and cancel to prevent the original method from running
-    //     cir.setReturnValue(fenceExists);
-    // }
-
-    /**
-     * Inject into "dropItem" (yarn: onBreak) to ensure custom connections are cleaned up when the knot is broken.
-     * 
-     * @see LeashFenceKnotEntity#dropItem
-     */
-    // @Inject(method = "dropItem", at = @At("HEAD"))
-    // private void onDropItem(ServerLevel world, Entity breaker, CallbackInfo ci) {
-    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
-    //     KnotInteractionHelper.discardCustomConnections(self, breaker);
-    // }
-
     /**
      * Inject into "addAdditionalSaveData" (yarn: writeCustomData) to save leash data and custom connections when the knot is saved to NBT.
      */
@@ -235,7 +182,6 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
         connectionManager.readFromView(view);
     }
 
-
     /**
      * Inject into "notifyLeasheeRemoved" (yarn: onHeldLeashUpdate) to prevent knot removal when it's part of fence-to-fence connections.
      * This is called when an entity that this knot is holding gets unleashed.
@@ -246,10 +192,7 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
     private void onNotifyLeasheeRemoved(Leashable heldLeashable, CallbackInfo ci) {
         LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
 
-        LeashedFencesMod.LOGGER.info(">> onNotifyLeasheeRemoved: [" + this.getUUID() + ", " + ((Entity) heldLeashable).getUUID() + "]");
-
         if (KnotInteractionHelper.shouldRemoveKnot(knot)) {
-            LeashedFencesMod.LOGGER.info(">> onNotifyLeasheeRemoved: " + this.getUUID() +" DISCARDED");
             knot.discard();
         }
               

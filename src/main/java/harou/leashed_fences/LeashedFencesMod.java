@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 public class LeashedFencesMod implements ModInitializer {
 	public static final String MOD_ID = "leashed-fences";
-	public static final boolean SHOW_DEBUG_NAMES = true;
+	public static final boolean SHOW_DEBUG_NAMES = false;
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.

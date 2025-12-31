@@ -1,6 +1,5 @@
 package harou.leashed_fences.util;
 
-import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import java.util.*;
 import net.minecraft.core.UUIDUtil;
@@ -52,26 +51,16 @@ public class KnotConnectionManager {
 
     public static <E extends LeashFenceKnotEntity & Leashable> void tickLeash(ServerLevel serverLevel, E knot) {
         KnotConnectionManager manager = getManager(knot);
-        var connectedKnots = manager.getConnectedKnots(knot);
+        var removedIds = manager.getRemovedIds(knot);
 
-        LeashedFencesMod.LOGGER.info(">> tickLeash: " + knot.getUUID() + " with " + manager.getConnectionCount() + " connections and " + connectedKnots.size() + "knots");
-
-        for (var connectedKnot : connectedKnots) {
-            if (!connectedKnot.canInteractWithLevel() || !knot.canInteractWithLevel()) {
-                LeashedFencesMod.LOGGER.info(">> tickLeash: [" + knot.getUUID() + ", " + connectedKnot.getUUID() + "]");
-                if (serverLevel.getGameRules().get(GameRules.ENTITY_DROPS)) {
-                    removeConnection(knot, connectedKnot, true);
-                    // manager.clearAllConnections(knot, true);
-				} else {
-                    removeConnection(knot, connectedKnot, false);
-                    // manager.clearAllConnections(knot, false);
-				}
-            }
-
-            // Vanilla would also check snapping distance here, but since Knots can't move we can
-            // optimize and just check only when new connection is created.
-            // {@link KnotInteractionActions.passLeadsFromPlayerToKnot}
+        for (var id : removedIds) {
+            var dropLead = serverLevel.getGameRules().get(GameRules.ENTITY_DROPS);
+            removeConnection(knot, id, dropLead);
         }
+
+        // Vanilla would also check snapping distance here, but since Knots can't move we can
+        // optimize and just check only when new connection is created.
+        // {@link KnotInteractionActions.passLeadsFromPlayerToKnot}
     }
     
     /**
@@ -137,14 +126,61 @@ public class KnotConnectionManager {
     }
 
     /**
+     * Hacky way to remove connections where second knot is no longer in the world.
+     * "Better" way might be to have state as entities rather than IDs, but too lazy to do that change now.
+     * @return true if connection was removed (false if it didn't exist)
+     */
+    public static boolean removeConnection(LeashFenceKnotEntity knot, UUID connectedKnotId, boolean dropLead) {
+        if (knot.getUUID() == connectedKnotId) {
+            return false;
+        }
+        
+        KnotConnectionManager managerA = getManager(knot);
+        
+        boolean removed = managerA.connectedKnotUuids.remove(connectedKnotId);
+
+        if (removed) {
+            if (knot instanceof Leashable leashable) leashable.onLeashRemoved();
+            // TODO: we can't pass knotB
+            knot.notifyLeasheeRemoved((Leashable) knot);
+            if (!knot.isRemoved() && knot.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knot);
+        }
+
+        return removed;
+    }
+
+    /**
      * Removes all connections (called when knot is removed)
      */
-    public void clearAllConnections(LeashFenceKnotEntity self, boolean dropLead) {
+    public boolean clearAllConnections(LeashFenceKnotEntity self, boolean dropLead) {
         var connectedKnots = getConnectedKnots(self);
+        var hasConnections = hasConnections();
+
         // Remove this knot from all connected knots' lists
         for (var connectedKnot : connectedKnots) {
             removeConnection(self, connectedKnot, dropLead);
         }
+        
+        return hasConnections;
+    }
+
+    /**
+     * Resolves UUIDs to actual entity instances in the world.
+     */
+    public List<UUID> getRemovedIds(LeashFenceKnotEntity self) {
+        List<UUID> removedIds = new ArrayList<>();
+        if (!(self.level() instanceof ServerLevel serverWorld)) return removedIds;
+        Iterator<UUID> iterator = connectedKnotUuids.iterator();
+        
+        while (iterator.hasNext()) {
+            UUID uuid = iterator.next();
+            Entity entity = serverWorld.getEntity(uuid);
+            if (!(entity instanceof LeashFenceKnotEntity)) {
+                removedIds.add(uuid);
+            }
+        }
+
+        return removedIds;
     }
     
     /**
@@ -164,7 +200,7 @@ public class KnotConnectionManager {
                 
                 if (entity instanceof LeashFenceKnotEntity knot) {
                     connectedKnots.add(knot);
-                } 
+                }
             } else {
                 // Client side: just resolve without validation
                 // Iterate through loaded entities to find by UUID

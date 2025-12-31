@@ -170,16 +170,11 @@ public class KnotInteractionHelper {
         }
         
         KnotConnectionManager manager = access.leashedFences$getConnectionManager();
-        List<LeashFenceKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
-        int connectionCount = connectedKnots.size();
-        
-        for (LeashFenceKnotEntity connectedKnot : connectedKnots) {
-            KnotConnectionManager.removeConnection(knot, connectedKnot, true);
-        }
-        
+        boolean clearedConnections = manager.clearAllConnections(knot, true);
+
         knot.gameEvent(GameEvent.BLOCK_DETACH, player);
 
-        return connectionCount > 0;
+        return clearedConnections;
     }
     
     /**
@@ -194,14 +189,14 @@ public class KnotInteractionHelper {
         List<LeashFenceKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
 
         for (LeashFenceKnotEntity connectedKnot : connectedKnots) {
-            // TRANSITION: Remove custom connection
-            KnotConnectionManager.removeConnection(knot, connectedKnot, false);
-            
-            // TRANSITION: Attach to player via vanilla Leashable for chaining
+            // Add knot-player connection first to avoid removing knot
             double distance = player.distanceToSqr(connectedKnot);
             if (distance <= 100.0) { // 10 blocks squared
                 ((Leashable)connectedKnot).setLeashedTo(player, true);
             }
+
+            // Remove knot-to-knot connections player picked up
+            KnotConnectionManager.removeConnection(knot, connectedKnot, false);
         }
         
         knot.gameEvent(GameEvent.BLOCK_DETACH, player);
