@@ -64,11 +64,21 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
 
         LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
         
-        // Handle vanilla leash distance checking (when this knot is being held by a player)
-        // BlockAttachedEntity.tick() doesn't call super.tick(), so Entity.tick()'s leash logic never runs
-        // We must manually call Leashable.tickLeash() here
-        if (self.level() instanceof ServerLevel serverWorld && this.isLeashed()) {
-            Leashable.tickLeash(serverWorld, (LeashFenceKnotEntity & Leashable) (Object) self);
+        
+        if (self.level() instanceof ServerLevel serverWorld) {
+            var leashableKnot = (LeashFenceKnotEntity & Leashable) (Object) self;
+
+            // Handle vanilla leash distance checking (when this knot is being held by a player)
+            // BlockAttachedEntity.tick() doesn't call super.tick(), which means Entity.tick()'s leash logic wouldn't run
+            // and so we must manually call Leashable.tickLeash() here
+            if (this.isLeashed()) {
+                Leashable.tickLeash(serverWorld, leashableKnot);
+            }
+
+            // Handles removing lead connections when their knots get discarded/killed
+            if (this.connectionManager.hasConnections()) {
+                KnotConnectionManager.tickLeash(serverWorld, leashableKnot);
+            }
         }
         
         // Show which system(s) are active for this knot (debug display)
@@ -145,55 +155,55 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
         return new Vec3(0.0, 0.2, 0.0);
     }
 
-    @Override
-    public void onLeashRemoved() {
-        // When this knot's leash is removed (it was being held by something), 
-        // check if it should be discarded
-        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
+    // @Override
+    // public void onLeashRemoved() {
+    //     // When this knot's leash is removed (it was being held by something), 
+    //     // check if it should be discarded
+    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
         
-        // If this knot has no other entities attached to it AND no custom connections, remove it
-        boolean hasVanillaConnections = !Leashable.leashableLeashedTo(self).isEmpty();
-        boolean hasCustomConnections = connectionManager.hasConnections();
+    //     // If this knot has no other entities attached to it AND no custom connections, remove it
+    //     boolean hasVanillaConnections = !Leashable.leashableLeashedTo(self).isEmpty();
+    //     boolean hasCustomConnections = connectionManager.hasConnections();
         
-        if (!hasVanillaConnections && !hasCustomConnections) {
-            self.discard();
-        }
-    }
+    //     if (!hasVanillaConnections && !hasCustomConnections) {
+    //         self.discard();
+    //     }
+    // }
 
     /**
      * Inject into "survives" (yarn: canStayAttached) to clean up custom connections before the knot is removed.
      * 
      * @see LeashFenceKnotEntity#survives
      */
-    @Inject(method = "survives", at = @At("HEAD"), cancellable = true)
-    private void onSurvives(CallbackInfoReturnable<Boolean> cir) {
-        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
-        boolean fenceExists = self.level().getBlockState(self.getPos()).is(BlockTags.FENCES);
+    // @Inject(method = "survives", at = @At("HEAD"), cancellable = true)
+    // private void onSurvives(CallbackInfoReturnable<Boolean> cir) {
+    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
+    //     boolean fenceExists = self.level().getBlockState(self.getPos()).is(BlockTags.FENCES);
         
-        // If fence doesn't exist, clean up custom connections before removal
-        if (!fenceExists && connectionManager.hasConnections()) {
-            connectionManager.clearAllConnections(self.level(), self);
+    //     // If fence doesn't exist, clean up custom connections before removal
+    //     if (!fenceExists && connectionManager.hasConnections()) {
+    //         connectionManager.clearAllConnections(self, true);
             
-            // Send update to clients
-            if (!self.level().isClientSide()) {
-                KnotConnectionSyncS2CPacket.sendToTracking(self);
-            }
-        }
+    //         // Send update to clients
+    //         if (!self.level().isClientSide()) {
+    //             KnotConnectionSyncS2CPacket.sendToTracking(self);
+    //         }
+    //     }
         
-        // Set the return value and cancel to prevent the original method from running
-        cir.setReturnValue(fenceExists);
-    }
+    //     // Set the return value and cancel to prevent the original method from running
+    //     cir.setReturnValue(fenceExists);
+    // }
 
     /**
      * Inject into "dropItem" (yarn: onBreak) to ensure custom connections are cleaned up when the knot is broken.
      * 
      * @see LeashFenceKnotEntity#dropItem
      */
-    @Inject(method = "dropItem", at = @At("HEAD"))
-    private void onDropItem(ServerLevel world, Entity breaker, CallbackInfo ci) {
-        LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
-        KnotInteractionHelper.discardCustomConnections(self, breaker);
-    }
+    // @Inject(method = "dropItem", at = @At("HEAD"))
+    // private void onDropItem(ServerLevel world, Entity breaker, CallbackInfo ci) {
+    //     LeashFenceKnotEntity self = (LeashFenceKnotEntity)(Object)this;
+    //     KnotInteractionHelper.discardCustomConnections(self, breaker);
+    // }
 
     /**
      * Inject into "addAdditionalSaveData" (yarn: writeCustomData) to save leash data and custom connections when the knot is saved to NBT.
@@ -229,21 +239,20 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
     /**
      * Inject into "notifyLeasheeRemoved" (yarn: onHeldLeashUpdate) to prevent knot removal when it's part of fence-to-fence connections.
      * This is called when an entity that this knot is holding gets unleashed.
+     * 
+     * @see LeashFenceKnotEntity#notifyLeasheeRemoved
      */
     @Inject(method = "notifyLeasheeRemoved", at = @At("HEAD"), cancellable = true)
     private void onNotifyLeasheeRemoved(Leashable heldLeashable, CallbackInfo ci) {
         LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
-        
-        // Check if this knot still has entities held by it OR is being leashed to something OR has custom connections
-        boolean hasHeldEntities = !Leashable.leashableLeashedTo(knot).isEmpty();
-        boolean isBeingLeashed = this.isLeashed();
-        boolean hasKnotToKnotConnections = connectionManager.hasConnections();
-        
-        // Only discard if the knot is completely unused (not holding anything, not being held, and no knot-to-knot connections)
-        if (!hasHeldEntities && !isBeingLeashed && !hasKnotToKnotConnections) {
+
+        LeashedFencesMod.LOGGER.info(">> onNotifyLeasheeRemoved: [" + this.getUUID() + ", " + ((Entity) heldLeashable).getUUID() + "]");
+
+        if (KnotInteractionHelper.shouldRemoveKnot(knot)) {
+            LeashedFencesMod.LOGGER.info(">> onNotifyLeasheeRemoved: " + this.getUUID() +" DISCARDED");
             knot.discard();
         }
-        
+              
         // Cancel vanilla behavior - we've handled it ourselves
         ci.cancel();
     }
@@ -281,7 +290,7 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
             } else if (KnotInteractionHelper.hasLeadItem(player)) {
                 cir.setReturnValue(KnotInteractionActions.connectKnotToPlayer(player, knot));
                 return;
-            } else if (knot instanceof KnotConnectionAccess access && access.leashedFences$getConnectionManager().hasConnections()) { 
+            } else if (this.connectionManager.hasConnections()) { 
                 cir.setReturnValue(KnotInteractionActions.passKnotsFromKnotToPlayer(player, knot));
                 return;
             } else {

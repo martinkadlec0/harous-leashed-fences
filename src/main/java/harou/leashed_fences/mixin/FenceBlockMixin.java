@@ -86,21 +86,21 @@ public abstract class FenceBlockMixin extends CrossCollisionBlock {
      * 
      * @see BlockBehaviour#affectNeighborsAfterRemoval
      */
-    @Override
-    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
-        // Find any knot at this position
-        List<LeashFenceKnotEntity> knots = world.getEntitiesOfClass(
-            LeashFenceKnotEntity.class,
-            new net.minecraft.world.phys.AABB(pos),
-            knot -> knot.getPos().equals(pos)
-        );
+    // @Override
+    // protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+    //     // Find any knot at this position
+    //     List<LeashFenceKnotEntity> knots = world.getEntitiesOfClass(
+    //         LeashFenceKnotEntity.class,
+    //         new net.minecraft.world.phys.AABB(pos),
+    //         knot -> knot.getPos().equals(pos)
+    //     );
         
-        // This should be always just one knot (or none) as there can't be multiple knots at the same position
-        for (LeashFenceKnotEntity knot : knots) {
-            // Clean up custom connections
-            knot.discard();
-            knot.dropItem(world, null);
-        }
-    }
+    //     // This should be always just one knot (or none) as there can't be multiple knots at the same position
+    //     for (LeashFenceKnotEntity knot : knots) {
+    //         // Clean up custom connections
+    //         knot.discard();
+    //         knot.dropItem(world, null);
+    //     }
+    // }
 }
 

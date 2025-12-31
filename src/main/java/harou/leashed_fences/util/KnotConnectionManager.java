@@ -1,5 +1,6 @@
 package harou.leashed_fences.util;
 
+import harou.leashed_fences.LeashedFencesMod;
 import harou.leashed_fences.network.KnotConnectionSyncS2CPacket;
 import java.util.*;
 import net.minecraft.core.UUIDUtil;
@@ -12,12 +13,16 @@ import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 
 /**
  * Manages bidirectional connections between LeashKnotEntities.
  * This is a custom system separate from vanilla Leashable to support many-to-many connections.
+ * 
+ * It handles connection (Lead between knots) lifecycle, but NOT the lifecycle of the knot itself
  */
 public class KnotConnectionManager {
     private static final String CONNECTIONS_NBT_KEY = "KnotConnections";
@@ -34,27 +39,38 @@ public class KnotConnectionManager {
 
     public void checkDistance(LeashFenceKnotEntity self) {
         var knots = this.getConnectedKnots(self);
-        var snappedAny = false;
+        if (!(self instanceof Leashable leashableSelf)) return;
 
-        if (self instanceof Leashable leashableSelf) {
-            for (var knot : knots) {
-                if (knot instanceof Leashable leashableKnot) {
-                    double d = leashableSelf.leashDistanceTo(knot);
-                    if (d > leashableKnot.leashSnapDistance()) {
-                        snappedAny = true;
-                        removeConnection(self, knot);
-                        leashableKnot.onLeashRemoved();
-                        self.spawnAtLocation((ServerLevel) self.level(), Items.LEAD);
-                        
-                        if (!knot.isRemoved()) KnotConnectionSyncS2CPacket.sendToTracking(knot);
-                    }
-                }
+        for (var knot : knots) {
+            if (!(knot instanceof Leashable leashableKnot)) continue;
+            double d = leashableSelf.leashDistanceTo(knot);
+            if (d > leashableKnot.leashSnapDistance()) {
+                removeConnection(self, knot, true);
+            }
+        }
+    }
+
+    public static <E extends LeashFenceKnotEntity & Leashable> void tickLeash(ServerLevel serverLevel, E knot) {
+        KnotConnectionManager manager = getManager(knot);
+        var connectedKnots = manager.getConnectedKnots(knot);
+
+        LeashedFencesMod.LOGGER.info(">> tickLeash: " + knot.getUUID() + " with " + manager.getConnectionCount() + " connections and " + connectedKnots.size() + "knots");
+
+        for (var connectedKnot : connectedKnots) {
+            if (!connectedKnot.canInteractWithLevel() || !knot.canInteractWithLevel()) {
+                LeashedFencesMod.LOGGER.info(">> tickLeash: [" + knot.getUUID() + ", " + connectedKnot.getUUID() + "]");
+                if (serverLevel.getGameRules().get(GameRules.ENTITY_DROPS)) {
+                    removeConnection(knot, connectedKnot, true);
+                    // manager.clearAllConnections(knot, true);
+				} else {
+                    removeConnection(knot, connectedKnot, false);
+                    // manager.clearAllConnections(knot, false);
+				}
             }
 
-            if (snappedAny) {
-                if (!self.isRemoved()) KnotConnectionSyncS2CPacket.sendToTracking(self);
-                leashableSelf.onLeashRemoved();
-            }
+            // Vanilla would also check snapping distance here, but since Knots can't move we can
+            // optimize and just check only when new connection is created.
+            // {@link KnotInteractionActions.passLeadsFromPlayerToKnot}
         }
     }
     
@@ -73,6 +89,14 @@ public class KnotConnectionManager {
         
         boolean addedA = managerA.connectedKnotUuids.add(knotB.getUUID());
         boolean addedB = managerB.connectedKnotUuids.add(knotA.getUUID());
+
+        if (addedA) {
+            if (!knotA.isRemoved() && knotA.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knotA);
+        }
+
+        if (addedB) {
+            if (!knotB.isRemoved() && knotB.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knotB);
+        }
         
         return addedA || addedB;
     }
@@ -82,7 +106,7 @@ public class KnotConnectionManager {
      * Updates both knots' connection lists.
      * @return true if connection was removed (false if didn't exist)
      */
-    public static boolean removeConnection(LeashFenceKnotEntity knotA, LeashFenceKnotEntity knotB) {
+    public static boolean removeConnection(LeashFenceKnotEntity knotA, LeashFenceKnotEntity knotB, boolean dropLead) {
         if (knotA == knotB) {
             return false;
         }
@@ -92,8 +116,35 @@ public class KnotConnectionManager {
         
         boolean removedA = managerA.connectedKnotUuids.remove(knotB.getUUID());
         boolean removedB = managerB.connectedKnotUuids.remove(knotA.getUUID());
+
+        if (removedA) {
+            if (knotA instanceof Leashable leashableA) leashableA.onLeashRemoved();
+            knotA.notifyLeasheeRemoved((Leashable) knotB);
+            if (!knotA.isRemoved() && knotA.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knotA);
+        }
+
+        if (removedB) {
+            if (knotB instanceof Leashable leashableB) leashableB.onLeashRemoved();
+            knotB.notifyLeasheeRemoved((Leashable) knotA);
+            if (!knotB.isRemoved() && knotB.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knotB);
+        }
+
+        if (removedA && removedB && dropLead) {
+            knotA.spawnAtLocation((ServerLevel) knotA.level(), Items.LEAD);
+        }
         
         return removedA || removedB;
+    }
+
+    /**
+     * Removes all connections (called when knot is removed)
+     */
+    public void clearAllConnections(LeashFenceKnotEntity self, boolean dropLead) {
+        var connectedKnots = getConnectedKnots(self);
+        // Remove this knot from all connected knots' lists
+        for (var connectedKnot : connectedKnots) {
+            removeConnection(self, connectedKnot, dropLead);
+        }
     }
     
     /**
@@ -111,18 +162,15 @@ public class KnotConnectionManager {
                 // Server side: validate and clean up invalid connections
                 Entity entity = serverWorld.getEntity(uuid);
                 
-                if (entity instanceof LeashFenceKnotEntity knot && !knot.isRemoved()) {
+                if (entity instanceof LeashFenceKnotEntity knot) {
                     connectedKnots.add(knot);
-                } else {
-                    // Entity doesn't exist or was removed, clean up
-                    iterator.remove();
-                }
+                } 
             } else {
                 // Client side: just resolve without validation
                 // Iterate through loaded entities to find by UUID
                 for (Entity entity : world.getEntitiesOfClass(
                         LeashFenceKnotEntity.class,
-                        new net.minecraft.world.phys.AABB(
+                        new AABB(
                             self.getX() - 50, self.getY() - 50, self.getZ() - 50,
                             self.getX() + 50, self.getY() + 50, self.getZ() + 50
                         ),
@@ -165,38 +213,6 @@ public class KnotConnectionManager {
      */
     public int getConnectionCount() {
         return connectedKnotUuids.size();
-    }
-    
-    /**
-     * Removes all connections (called when knot is removed)
-     */
-    public void clearAllConnections(Level world, LeashFenceKnotEntity self) {
-        if (world instanceof ServerLevel serverWorld) {
-            // Remove this knot from all connected knots' lists
-            for (UUID uuid : new ArrayList<>(connectedKnotUuids)) {
-                Entity entity = serverWorld.getEntity(uuid);
-                if (entity instanceof LeashFenceKnotEntity knot) {
-                    getManager(knot).connectedKnotUuids.remove(self.getUUID());
-                    
-                    // Check if the connected knot should be removed (no more connections)
-                    boolean hasVanillaConnections = !Leashable.leashableLeashedTo(knot).isEmpty();
-                    boolean isBeingLeashed = knot instanceof Leashable leashable && 
-                                            leashable.getLeashData() != null && 
-                                            leashable.getLeashData().leashHolder != null;
-                    boolean hasCustomConnections = getManager(knot).hasConnections();
-                    
-                    if (!hasVanillaConnections && !isBeingLeashed && !hasCustomConnections) {
-                        // Send update to clients before discarding
-                        KnotConnectionSyncS2CPacket.sendToTracking(knot);
-                        knot.discard();
-                    } else {
-                        // Send update to clients for the connection change
-                        KnotConnectionSyncS2CPacket.sendToTracking(knot);
-                    }
-                }
-            }
-        }
-        connectedKnotUuids.clear();
     }
     
     /**
