@@ -25,7 +25,7 @@ public class LeashedFencesMod implements ModInitializer {
 		// Proceed with mild caution.
 
 		// Register custom packet for syncing knot connections
-		PayloadTypeRegistry.playS2C().register(KnotConnectionSyncS2CPacket.ID, KnotConnectionSyncS2CPacket.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(KnotConnectionSyncS2CPacket.ID, KnotConnectionSyncS2CPacket.CODEC);
 
 		// Register entity tracking event handler
 		EntityTrackingEvents.START_TRACKING.register(EntityTrackingHandler::onStartTracking);

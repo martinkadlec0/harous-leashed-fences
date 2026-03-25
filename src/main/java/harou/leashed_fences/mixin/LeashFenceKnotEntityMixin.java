@@ -183,6 +183,22 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
     }
 
     /**
+     * In Vanilla Knot is always the holder, and so notifyLeasheeRemoved handles its knot removal.
+     * But with this mod in a knot-to-player connection, the player is the holder. So we need to
+     * also validate in `onLeashRemoved` if the knot should be removed.
+     * @see Leashable#dropLeash
+     * 
+     * @Override
+     */
+    public void onLeashRemoved() {
+        LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
+
+        if (KnotInteractionHelper.shouldRemoveKnot(knot)) {
+            knot.discard();
+        }
+    }
+
+    /**
      * Inject into "notifyLeasheeRemoved" (yarn: onHeldLeashUpdate) to prevent knot removal when it's part of fence-to-fence connections.
      * This is called when an entity that this knot is holding gets unleashed.
      * 
@@ -207,7 +223,7 @@ public abstract class LeashFenceKnotEntityMixin extends BlockAttachedEntity impl
      * @see LeashFenceKnotEntity#interact
      */
     @Inject(method = "interact", at = @At("HEAD"), cancellable = true)
-    private void onInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+    private void onInteract(Player player, InteractionHand hand, final Vec3 location, CallbackInfoReturnable<InteractionResult> cir) {
         LeashFenceKnotEntity knot = (LeashFenceKnotEntity)(Object)this;
 
         // Only on server side

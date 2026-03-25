@@ -146,6 +146,10 @@ public class KnotConnectionManager {
             if (!knot.isRemoved() && knot.level() instanceof ServerLevel) KnotConnectionSyncS2CPacket.sendToTracking(knot);
         }
 
+        if (removed && dropLead) {
+            knot.spawnAtLocation((ServerLevel) knot.level(), Items.LEAD);
+        }
+
         return removed;
     }
 
