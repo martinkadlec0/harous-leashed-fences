@@ -16,22 +16,22 @@ import java.util.UUID;
  * Responsible for syncing knot connection data to clients when they start tracking knots.
  */
 public class EntityTrackingHandler {
-    /**
-     * Called when a player starts tracking an entity.
-     * If the entity is a LeashKnot, sends its connection data to the client.
-     */
-    public static void onStartTracking(Entity trackedEntity, ServerPlayer player) {
-        // If this is a LeashKnotEntity, send our custom connection data
-        if (trackedEntity instanceof LeashFenceKnotEntity knot && knot instanceof KnotConnectionAccess access) {
-            // Get connection data
-            KnotConnectionManager connectionManager = access.leashedFences$getConnectionManager();
-            Set<UUID> connections = connectionManager.getConnectedUuids();
-            
-            // Only send if there are connections
-            if (!connections.isEmpty()) {
-                KnotConnectionSyncS2CPacket packet = new KnotConnectionSyncS2CPacket(knot.getId(), connections);
-                ServerPlayNetworking.send(player, packet);
-            }
-        }
-    }
+	/**
+	 * Called when a player starts tracking an entity.
+	 * If the entity is a LeashKnot, sends its connection data to the client.
+	 */
+	public static void onStartTracking(Entity trackedEntity, ServerPlayer player) {
+		// If this is a LeashKnotEntity, send our custom connection data
+		if (trackedEntity instanceof LeashFenceKnotEntity knot && knot instanceof KnotConnectionAccess access) {
+			// Get connection data
+			KnotConnectionManager connectionManager = access.leashedFences$getConnectionManager();
+			Set<UUID> connections = connectionManager.getConnectedUuids();
+			
+			// Only send if there are connections
+			if (!connections.isEmpty()) {
+				KnotConnectionSyncS2CPacket packet = new KnotConnectionSyncS2CPacket(knot.getId(), connections);
+				ServerPlayNetworking.send(player, packet);
+			}
+		}
+	}
 }

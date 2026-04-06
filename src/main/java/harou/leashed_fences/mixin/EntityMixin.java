@@ -18,29 +18,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(Entity.class)
 public class EntityMixin {
-    
-    /**
-     * When detaching all held leashes, also remove all custom knot connections.
-     * If any custom connection is removed, the method returns true.
-     * 
-     * @see Entity#dropAllLeashConnections
-     */
-    @Inject(method = "dropAllLeashConnections", at = @At("RETURN"), cancellable = true)
-    private void onDropAllLeashConnections(@Nullable Player player, CallbackInfoReturnable<Boolean> cir) {
-        Entity self = (Entity)(Object)this;
+	
+	/**
+	 * When detaching all held leashes, also remove all custom knot connections.
+	 * If any custom connection is removed, the method returns true.
+	 * 
+	 * @see Entity#dropAllLeashConnections
+	 */
+	@Inject(method = "dropAllLeashConnections", at = @At("RETURN"), cancellable = true)
+	private void onDropAllLeashConnections(@Nullable Player player, CallbackInfoReturnable<Boolean> cir) {
+		Entity self = (Entity)(Object)this;
 
-        if (self.level().isClientSide() || !(self instanceof LeashFenceKnotEntity knot)) {
-            return;
-        }
+		if (self.level().isClientSide() || !(self instanceof LeashFenceKnotEntity knot)) {
+			return;
+		}
 
-        var removedAny = KnotInteractionHelper.discardCustomConnections(knot, player);
-        
-        if (removedAny) {     
-            if (!cir.getReturnValue()) {
-                cir.setReturnValue(true);
-                self.gameEvent(GameEvent.SHEAR, player);
-            }
-        }
-    }
+		var removedAny = KnotInteractionHelper.discardCustomConnections(knot, player);
+		
+		if (removedAny) {     
+			if (!cir.getReturnValue()) {
+				cir.setReturnValue(true);
+				self.gameEvent(GameEvent.SHEAR, player);
+			}
+		}
+	}
 }
 

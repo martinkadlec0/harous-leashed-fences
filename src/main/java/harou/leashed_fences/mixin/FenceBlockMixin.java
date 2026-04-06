@@ -30,77 +30,77 @@ import java.util.List;
 @Mixin(FenceBlock.class)
 public abstract class FenceBlockMixin extends CrossCollisionBlock {
 
-    public FenceBlockMixin(Properties settings) {
+	public FenceBlockMixin(Properties settings) {
 		super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, settings);
 	}
-    
-    /**
-     * Replace interactions with FenceBlock
-     * 
-     * @see FenceBlock#useWithoutItem
-     */
-    @Inject(method = "useWithoutItem", at = @At("HEAD"), cancellable = true)
-    private void onUseWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
-        if (world.isClientSide()) {
-            cir.setReturnValue(InteractionResult.SUCCESS);
-            return;
-        }
-        
-        // Collect ALL entities held by player first
-        HeldEntities held = new HeldEntities(player);
-        
-        // Check if there's a knot at this position
-        List<LeashFenceKnotEntity> leashKnotEntities = world.getEntitiesOfClass(
-            LeashFenceKnotEntity.class,
-            new net.minecraft.world.phys.AABB(pos),
-            e -> e.getPos().equals(pos)
-        );
-        var knot = !leashKnotEntities.isEmpty() ? leashKnotEntities.getFirst() : null;
-        var newKnot = knot == null;
-        // var heldByKnot = knot != null ? new HeldEntities(knot) : null;
-        var playerHoldsThisKnot = knot != null ? KnotInteractionHelper.isHoldingEntity(held, knot) : false;
-        
-        if (held.isEmpty()) {
-            // No knot / helds mobs / helds knot -> PASS
-            // Player picks up mobs only when interacting directly with a Knot
-            cir.setReturnValue(InteractionResult.PASS);
-            return;
-        } else if (playerHoldsThisKnot) {            
-            cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
-            return;
-        } else {
-            if (knot == null) {
-                knot = LeashFenceKnotEntity.getOrCreateKnot(world, pos);
-                knot.playPlacementSound();
-            }
-            var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, !newKnot);
-            cir.setReturnValue(result);
-            return;
-        }
-        
-    }
+	
+	/**
+	 * Replace interactions with FenceBlock
+	 * 
+	 * @see FenceBlock#useWithoutItem
+	 */
+	@Inject(method = "useWithoutItem", at = @At("HEAD"), cancellable = true)
+	private void onUseWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
+		if (world.isClientSide()) {
+			cir.setReturnValue(InteractionResult.SUCCESS);
+			return;
+		}
+		
+		// Collect ALL entities held by player first
+		HeldEntities held = new HeldEntities(player);
+		
+		// Check if there's a knot at this position
+		List<LeashFenceKnotEntity> leashKnotEntities = world.getEntitiesOfClass(
+			LeashFenceKnotEntity.class,
+			new net.minecraft.world.phys.AABB(pos),
+			e -> e.getPos().equals(pos)
+		);
+		var knot = !leashKnotEntities.isEmpty() ? leashKnotEntities.getFirst() : null;
+		var newKnot = knot == null;
+		// var heldByKnot = knot != null ? new HeldEntities(knot) : null;
+		var playerHoldsThisKnot = knot != null ? KnotInteractionHelper.isHoldingEntity(held, knot) : false;
+		
+		if (held.isEmpty()) {
+			// No knot / helds mobs / helds knot -> PASS
+			// Player picks up mobs only when interacting directly with a Knot
+			cir.setReturnValue(InteractionResult.PASS);
+			return;
+		} else if (playerHoldsThisKnot) {            
+			cir.setReturnValue(KnotInteractionActions.dropKnotToPlayerConnection(player, knot));
+			return;
+		} else {
+			if (knot == null) {
+				knot = LeashFenceKnotEntity.getOrCreateKnot(world, pos);
+				knot.playPlacementSound();
+			}
+			var result = KnotInteractionActions.passLeadsFromPlayerToKnot(player, knot, !newKnot);
+			cir.setReturnValue(result);
+			return;
+		}
+		
+	}
 
-    /**
-     * BlockAttachedEntity.tick checks every 100 ticks if the block still exists, resulting in the knot floating in the air for up to 10s.
-     * This code should remove the knot instantly instead.
-     * 
-     * @see BlockBehaviour#affectNeighborsAfterRemoval
-     */
-    @Override
-    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
-        // Find any knot at this position
-        List<LeashFenceKnotEntity> knots = world.getEntitiesOfClass(
-            LeashFenceKnotEntity.class,
-            new net.minecraft.world.phys.AABB(pos),
-            knot -> knot.getPos().equals(pos)
-        );
-        
-        // This should be always just one knot (or none) as there can't be multiple knots at the same position
-        for (LeashFenceKnotEntity knot : knots) {
-            // Clean up custom connections
-            knot.discard();
-            knot.dropItem(world, null);
-        }
-    }
+	/**
+	 * BlockAttachedEntity.tick checks every 100 ticks if the block still exists, resulting in the knot floating in the air for up to 10s.
+	 * This code should remove the knot instantly instead.
+	 * 
+	 * @see BlockBehaviour#affectNeighborsAfterRemoval
+	 */
+	@Override
+	protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+		// Find any knot at this position
+		List<LeashFenceKnotEntity> knots = world.getEntitiesOfClass(
+			LeashFenceKnotEntity.class,
+			new net.minecraft.world.phys.AABB(pos),
+			knot -> knot.getPos().equals(pos)
+		);
+		
+		// This should be always just one knot (or none) as there can't be multiple knots at the same position
+		for (LeashFenceKnotEntity knot : knots) {
+			// Clean up custom connections
+			knot.discard();
+			knot.dropItem(world, null);
+		}
+	}
 }
 

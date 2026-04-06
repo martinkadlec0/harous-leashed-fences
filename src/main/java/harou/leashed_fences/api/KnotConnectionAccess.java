@@ -7,6 +7,6 @@ import harou.leashed_fences.util.KnotConnectionManager;
  * Implemented via mixin.
  */
 public interface KnotConnectionAccess {
-    KnotConnectionManager leashedFences$getConnectionManager();
+	KnotConnectionManager leashedFences$getConnectionManager();
 }
 

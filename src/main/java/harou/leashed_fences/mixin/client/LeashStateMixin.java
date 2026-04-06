@@ -12,17 +12,17 @@ import org.spongepowered.asm.mixin.Unique;
  */
 @Mixin(EntityRenderState.LeashState.class)
 public class LeashStateMixin implements LeashStateAccess {
-    @Unique
-    private boolean leashedFences$isKnotToKnot = false;
-    
-    @Override
-    public boolean leashedFences$isKnotToKnot() {
-        return leashedFences$isKnotToKnot;
-    }
-    
-    @Override
-    public void leashedFences$setIsKnotToKnot(boolean isKnotToKnot) {
-        this.leashedFences$isKnotToKnot = isKnotToKnot;
-    }
+	@Unique
+	private boolean leashedFences$isKnotToKnot = false;
+	
+	@Override
+	public boolean leashedFences$isKnotToKnot() {
+		return leashedFences$isKnotToKnot;
+	}
+	
+	@Override
+	public void leashedFences$setIsKnotToKnot(boolean isKnotToKnot) {
+		this.leashedFences$isKnotToKnot = isKnotToKnot;
+	}
 }
 
