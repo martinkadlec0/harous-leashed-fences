@@ -36,7 +36,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 	protected abstract int getBlockLightLevel(T entity, BlockPos pos);
 	
 	@Shadow
-	protected abstract AABB getBoundingBoxForCulling(T entity);
+	protected abstract AABB getBoundingBoxForCulling(T entity, float partialTicks);
 	
 	/**
 	 * Prevent culling of knots that have custom connections to visible knots.
@@ -45,12 +45,12 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 	 * @see EntityRenderer#shouldRender
 	 */
 	@Inject(
-		method = "shouldRender(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/culling/Frustum;DDD)Z",
+		method = "shouldRender(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/culling/Frustum;DDDF)Z",
 		at = @At("RETURN"),
 		cancellable = true
 	)
-	private void preventCustomConnectionCulling(T entity, Frustum frustum, 
-			double x, double y, double z, CallbackInfoReturnable<Boolean> cir) {
+	private void preventCustomConnectionCulling(T entity, Frustum frustum,
+			double x, double y, double z, float partialTicks, CallbackInfoReturnable<Boolean> cir) {
 		// If already being rendered, don't need to check
 		if (cir.getReturnValue()) {
 			return;
@@ -70,7 +70,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 		List<LeashFenceKnotEntity> connectedKnots = manager.getConnectedKnots(knot);
 		
 		if (!connectedKnots.isEmpty()) {
-			AABB thisBox = this.getBoundingBoxForCulling(entity);
+			AABB thisBox = this.getBoundingBoxForCulling(entity, partialTicks);
 			
 			// Check if any connected knot is visible (similar to vanilla Leashable check)
 			for (LeashFenceKnotEntity connectedKnot : connectedKnots) {

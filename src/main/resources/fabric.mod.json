@@ -21,9 +21,6 @@
 		],
 		"client": [
 			"harou.leashed_fences.LeashedFencesModClient"
-		],
-		"fabric-datagen": [
-			"harou.leashed_fences.LeashedFencesModDataGenerator"
 		]
 	},
 	"mixins": [

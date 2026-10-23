@@ -18,12 +18,6 @@ repositories {
 	// for more information about repositories.
 }
 
-fabricApi {
-	configureDataGeneration {
-		client = true
-	}
-}
-
 loom {
 	accessWidenerPath = file("src/main/resources/harous-leashed-fences.classtweaker")
 
